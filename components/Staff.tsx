@@ -184,7 +184,6 @@ const Staff: React.FC<StaffProps> = ({
             </div>
           )}
 
-          {/* التحديث: عرض البيانات الكاملة للموظف */}
           <div className="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-sm space-y-10">
              <div className="flex items-center gap-3 border-b pb-4"><Info className="text-indigo-600" size={24}/><h4 className="font-black text-lg uppercase">بيانات الموظف التفصيلية (Profile Data)</h4></div>
              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -287,8 +286,19 @@ const Staff: React.FC<StaffProps> = ({
 
              <div className="space-y-8">
                 <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-6">
-                   <div className="flex items-center gap-3 border-b pb-4 text-slate-600"><Settings size={18}/><h4 className="font-black text-xs uppercase">إدارة العضوية</h4></div>
+                   <div className="flex items-center gap-3 border-b pb-4 text-slate-600"><Settings size={18}/><h4 className="font-black text-xs uppercase">إدارة العضوية والترقيات</h4></div>
                    <div className="space-y-4">
+                      {/* ميزة الترقيات: تغيير المسمى الوظيفي */}
+                      <div className="space-y-2">
+                         <label className="text-[10px] font-black text-slate-400 uppercase">تغيير المسمى الوظيفي (ترقية)</label>
+                         <select 
+                            className="w-full p-3.5 bg-indigo-50 border border-indigo-100 rounded-xl font-black text-xs text-indigo-700" 
+                            value={s.role} 
+                            onChange={(e) => onUpdateUserRole(s.id, e.target.value as UserRole)}
+                          >
+                            {roles.map(r => <option key={r.role_key} value={r.role_key}>{r.role_name}</option>)}
+                         </select>
+                      </div>
                       <div className="space-y-2">
                          <label className="text-[10px] font-black text-slate-400 uppercase">نقل الموظف لفرع آخر</label>
                          <select className="w-full p-3.5 bg-slate-50 border rounded-xl font-black text-xs" value={s.branchId || ''} onChange={(e) => onTransferEmployee(s.id, e.target.value || null)}>
@@ -680,7 +690,11 @@ const Staff: React.FC<StaffProps> = ({
         {activeTab === 'roles' && (
            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {roles.map(r => (
-                 <div key={r.id} className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm hover:border-amber-600 hover:shadow-lg transition-all group">
+                 <div 
+                   key={r.id} 
+                   onClick={() => { setRoleFilter(r.role_key); setActiveTab('users'); }}
+                   className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm hover:border-amber-600 hover:shadow-lg transition-all group cursor-pointer"
+                 >
                     <div className="w-14 h-14 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center mb-6 shadow-inner group-hover:bg-amber-600 group-hover:text-white transition-all shadow-md"><ShieldCheck size={28}/></div>
                     <h3 className="text-xl font-black text-slate-800">{r.role_name}</h3>
                     <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">المعرف: {r.role_key}</p>
