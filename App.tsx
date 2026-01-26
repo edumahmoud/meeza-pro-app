@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { ViewType, User as UserType } from './types';
 import Layout from './components/Layout';
@@ -83,6 +82,16 @@ const App: React.FC = () => {
     setToast({ message, type });
   }, []);
 
+  // Auto-hide toast logic: Hide after 3 seconds
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => {
+        setToast(null);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
+
   const askConfirmation = useCallback((title: string, message: string, onConfirm: () => void, variant: 'danger' | 'warning' | 'info' = 'danger') => {
     setConfirmState({ isOpen: true, title, message, onConfirm, variant });
   }, []);
@@ -136,7 +145,7 @@ const App: React.FC = () => {
       case 'customers':
         return <Customers invoices={salesData.invoices} returns={returnData.returns} onShowToast={showToast} />;
       case 'purchases':
-        return <Purchases products={inventory.products} suppliers={purchaseData.suppliers} purchases={purchaseData.purchases} payments={purchaseData.payments} branches={staffData.branches} onAddSupplier={purchaseData.addSupplier} onDeleteSupplier={purchaseData.deleteSupplier} onAddPurchase={purchaseData.addPurchase} onAddProduct={inventory.addProduct} onAddSupplierPayment={purchaseData.addSupplierPayment} onShowToast={showToast} askConfirmation={askConfirmation} user={user} />;
+        return <Purchases products={inventory.products} suppliers={purchaseData.suppliers} purchases={purchaseData.purchases} payments={purchaseData.payments} purchaseReturns={purchaseData.purchaseReturns} branches={staffData.branches} onAddSupplier={purchaseData.addSupplier} onDeleteSupplier={purchaseData.deleteSupplier} onAddPurchase={purchaseData.addPurchase} onAddProduct={inventory.addProduct} onAddSupplierPayment={purchaseData.addSupplierPayment} onAddPurchaseReturn={purchaseData.addPurchaseReturn} onShowToast={showToast} askConfirmation={askConfirmation} user={user} />;
       case 'staff':
         return <Staff currentUser={user} users={staffData.users} branches={staffData.branches} staffPayments={staffData.staffPayments} leaveRequests={staffData.leaveRequests} invoices={salesData.invoices} expenses={salesData.expenses} products={inventory.products} roles={sys.roles} settings={sys.settings} onUpdateSettings={sys.updateSettings} onAddUser={staffData.addUser} onUpdateUser={staffData.updateUser} onTransferEmployee={staffData.onTransferEmployee} onUpdateBranch={staffData.updateBranch} onDeleteUser={staffData.deleteUser} onDeleteUserPermanent={staffData.deleteUserPermanent} onDeleteBranch={staffData.deleteBranch} onUpdateUserRole={staffData.updateUserRole} onAddStaffPayment={staffData.addStaffPayment} onResetPassword={staffData.resetUserPassword} onUpdateLeaveStatus={staffData.updateLeaveStatus} onShowToast={showToast} askConfirmation={askConfirmation} onAddBranch={staffData.addBranch} onAddRole={sys.addRole} onDeleteRole={sys.deleteRole} checkPermission={sys.checkPermission} />;
       case 'treasury':

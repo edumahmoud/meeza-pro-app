@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Terminal, ShieldAlert, Globe, Save, RefreshCw, Eye, EyeOff, Layout,
@@ -44,6 +43,9 @@ const ITControl: React.FC<ITControlProps> = ({
   const [newRole, setNewRole] = useState({ key: '', name: '' });
   const [globalDiscountValue, setGlobalDiscountValue] = useState<number>(0);
 
+  // Security Check: Restricted to Master Admin
+  const isMasterAdmin = user.username === 'admin' || user.id === '00000000-0000-0000-0000-000000000000';
+
   useEffect(() => {
     setFormData({...settings});
   }, [settings]);
@@ -58,6 +60,7 @@ const ITControl: React.FC<ITControlProps> = ({
   };
 
   const handleFullReset = async () => {
+    if (!isMasterAdmin) return onShowToast("عفواً، لا يملك صلاحية هذا الإجراء إلا المستخدم الافتراضي", "error");
     if (resetConfirmation < 2) {
         setResetConfirmation(prev => prev + 1);
         return;
@@ -197,7 +200,7 @@ const ITControl: React.FC<ITControlProps> = ({
              <button onClick={() => setActiveTab('offers')} className={`px-6 py-2 rounded-xl text-[10px] font-black transition-all shrink-0 ${activeTab === 'offers' ? 'bg-rose-600 text-white' : 'text-slate-400'}`}>العروض</button>
              <button onClick={() => setActiveTab('permissions')} className={`px-6 py-2 rounded-xl text-[10px] font-black transition-all shrink-0 ${activeTab === 'permissions' ? 'bg-white text-slate-900' : 'text-slate-400'}`}>المصفوفة</button>
              <button onClick={() => setActiveTab('general')} className={`px-6 py-2 rounded-xl text-[10px] font-black transition-all shrink-0 ${activeTab === 'general' ? 'bg-white text-slate-900' : 'text-slate-400'}`}>إعدادات</button>
-             <button onClick={() => setActiveTab('sovereignty')} className={`px-6 py-2 rounded-xl text-[10px] font-black transition-all shrink-0 ${activeTab === 'sovereignty' ? 'bg-rose-600 text-white' : 'text-slate-400'}`}>التطهير</button>
+             {isMasterAdmin && <button onClick={() => setActiveTab('sovereignty')} className={`px-6 py-2 rounded-xl text-[10px] font-black transition-all shrink-0 ${activeTab === 'sovereignty' ? 'bg-rose-600 text-white' : 'text-slate-400'}`}>التطهير</button>}
           </div>
         </div>
       </div>
@@ -329,7 +332,7 @@ const ITControl: React.FC<ITControlProps> = ({
         </div>
       )}
 
-      {activeTab === 'sovereignty' && (
+      {activeTab === 'sovereignty' && isMasterAdmin && (
         <div className="max-w-3xl mx-auto space-y-8 animate-in slide-in-from-bottom-10">
            {resetStatus === 'processing' || resetStatus === 'success' ? (
               <div className="bg-white p-12 rounded-[3.5rem] border border-slate-200 shadow-2xl space-y-10 text-center animate-in zoom-in-95">
