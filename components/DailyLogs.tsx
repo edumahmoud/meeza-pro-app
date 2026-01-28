@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { 
   History, Search, ArrowUpCircle, ArrowDownCircle, Banknote, RefreshCw, 
@@ -16,14 +15,14 @@ interface DailyLogsProps {
   user: UserType;
 }
 
-const DailyLogs: React.FC<DailyLogsProps> = ({ logs, invoices, auditLogs, onRefresh, user }) => {
-  const [activeTab, setActiveTab] = useState<'activity' | 'sales' | 'security'>('activity');
+const DailyLogs = ({ logs, invoices, auditLogs, onRefresh, user }: DailyLogsProps) => {
+  const [activeTab, setActiveTab] = useState('activity' as 'activity' | 'sales' | 'security');
   const [searchTerm, setSearchTerm] = useState('');
-  const [typeFilter, setTypeFilter] = useState<string>('all');
-  const [dateFilter, setDateFilter] = useState<string>(''); 
-  const [selectedAudit, setSelectedAudit] = useState<AuditLog | null>(null);
+  const [typeFilter, setTypeFilter] = useState('all' as string);
+  const [dateFilter, setDateFilter] = useState('' as string); 
+  const [selectedAudit, setSelectedAudit] = useState(null as AuditLog | null);
   const [visibleCount, setVisibleCount] = useState(50);
-  const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>({ key: 'timestamp', direction: 'desc' });
+  const [sortConfig, setSortConfig] = useState({ key: 'timestamp', direction: 'desc' } as { key: string, direction: 'asc' | 'desc' } | null);
 
   const isAdmin = ['admin', 'it_support', 'general_manager'].includes(user.role);
 
@@ -94,7 +93,7 @@ const DailyLogs: React.FC<DailyLogsProps> = ({ logs, invoices, auditLogs, onRefr
   return (
     <div className="space-y-8 animate-in font-['Cairo'] pb-12 select-text" dir="rtl">
       <div className="bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-sm flex flex-col xl:flex-row gap-4 items-center justify-between">
-        <div className="flex bg-slate-100 p-1.5 rounded-2xl w-full xl:w-auto overflow-x-auto scrollbar-hide">
+        <div className="flex bg-slate-100 p-1.5 rounded-2xl w-full xl:auto overflow-x-auto scrollbar-hide">
           {['activity', 'sales', 'security'].map(tab => (
              (tab !== 'security' || isAdmin) && (
                <button key={tab} onClick={() => { setActiveTab(tab as any); setVisibleCount(50); }} className={`flex-1 min-w-[120px] py-3 px-6 rounded-xl text-[10px] font-black transition-all ${activeTab === tab ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-indigo-600'}`}>{tab === 'activity' ? 'سجل النشاط العام' : tab === 'sales' ? 'جدول المبيعات' : 'الرقابة الأمنية'}</button>

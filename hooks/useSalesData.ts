@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { Invoice, Expense, User } from '../types';
 import { supabase } from '../supabaseClient';
@@ -13,9 +12,9 @@ export interface SummaryStats {
 }
 
 export const useSalesData = () => {
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [summaryStats, setSummaryStats] = useState<SummaryStats | null>(null);
+  const [invoices, setInvoices] = useState([] as Invoice[]);
+  const [expenses, setExpenses] = useState([] as Expense[]);
+  const [summaryStats, setSummaryStats] = useState(null as SummaryStats | null);
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
@@ -164,8 +163,6 @@ export const useSalesData = () => {
   };
 
   const deleteExpense = async (id: string, amount: number, description: string, user: User) => {
-    // 1. تسجيل استرداد المبلغ في الخزينة
-    // نستخدم معرف نصي مع بادئة DEL لتفادي قيود الربط، ونضمن إرسال branch_id بشكل صحيح
     const { error: logError } = await supabase.from('treasury_logs').insert([{
       branch_id: user.branchId || null, 
       type: 'in',
@@ -182,11 +179,9 @@ export const useSalesData = () => {
       throw new Error(`فشل تسجيل استرداد المبلغ: ${logError.message}`);
     }
 
-    // 2. حذف المصروف فعلياً
     const { error } = await supabase.from('expenses').delete().eq('id', id);
     if (error) {
       console.error("Expense Delete Error:", error);
-      // محاولة تراجع عن تسجيل الخزينة إذا فشل الحذف لتجنب عدم الاتساق (اختياري، لكن هنا نكتفي برمي الخطأ)
       throw new Error(`فشل حذف سجل المصروف من قاعدة البيانات: ${error.message}`);
     }
     await fetchData();

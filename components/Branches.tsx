@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { 
   Edit3, Trash2, Power, Users, Activity, ShieldCheck, FileText, 
@@ -24,8 +23,8 @@ export const BranchCard: React.FC<BranchCardProps> = ({
   onUpdateBranch, onDeleteBranch, onShowToast, onViewUsers 
 }) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editForm, setEditForm] = useState<Partial<Branch>>({});
-  const [isDeleting, setIsDeleting] = useState<{id: string, reason: string} | null>(null);
+  const [editForm, setEditForm] = useState({} as Partial<Branch>);
+  const [isDeleting, setIsDeleting] = useState(null as {id: string, reason: string} | null);
   const [isSaving, setIsSaving] = useState(false);
 
   const branchUsers = users.filter(u => u.branchId === b.id);

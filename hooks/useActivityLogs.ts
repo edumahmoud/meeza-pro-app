@@ -1,10 +1,9 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { ActivityLog } from '../types';
 import { supabase } from '../supabaseClient';
 
 export const useActivityLogs = () => {
-  const [logs, setLogs] = useState<ActivityLog[]>([]);
+  const [logs, setLogs] = useState([] as ActivityLog[]);
   const [loading, setLoading] = useState(true);
 
   const fetchLogs = useCallback(async () => {

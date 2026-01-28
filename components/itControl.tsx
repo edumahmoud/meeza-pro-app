@@ -28,20 +28,20 @@ const ITControl: React.FC<ITControlProps> = ({
   settings, overrides, roles, onUpdateSettings, onAddOverride, onRemoveOverride, onAddRole, onDeleteRole, onShowToast, user 
 }) => {
   const { applyGlobalDiscount, clearAllOffers } = useInventory();
-  const [formData, setFormData] = useState<SystemSettings>({...settings});
-  const [activeTab, setActiveTab] = useState<'general' | 'permissions' | 'roles' | 'sovereignty' | 'offers'>('roles');
-  const [restrictionType, setRestrictionType] = useState<'role' | 'user'>('role');
+  const [formData, setFormData] = useState({...settings} as SystemSettings);
+  const [activeTab, setActiveTab] = useState('roles' as 'general' | 'permissions' | 'roles' | 'sovereignty' | 'offers');
+  const [restrictionType, setRestrictionType] = useState('role' as 'role' | 'user');
   const [targetId, setTargetId] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   
-  const [resetStatus, setResetStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
+  const [resetStatus, setResetStatus] = useState('idle' as 'idle' | 'processing' | 'success' | 'error');
   const [progress, setProgress] = useState(0);
   const [currentStage, setCurrentStage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [resetConfirmation, setResetConfirmation] = useState(0);
 
   const [newRole, setNewRole] = useState({ key: '', name: '' });
-  const [globalDiscountValue, setGlobalDiscountValue] = useState<number>(0);
+  const [globalDiscountValue, setGlobalDiscountValue] = useState(0 as number);
 
   // Security Check: Restricted to Master Admin
   const isMasterAdmin = user.username === 'admin' || user.id === '00000000-0000-0000-0000-000000000000';
@@ -49,6 +49,13 @@ const ITControl: React.FC<ITControlProps> = ({
   useEffect(() => {
     setFormData({...settings});
   }, [settings]);
+
+  // Force tab safety
+  useEffect(() => {
+    if (activeTab === 'sovereignty' && !isMasterAdmin) {
+      setActiveTab('roles');
+    }
+  }, [activeTab, isMasterAdmin]);
 
   const handleClearCache = () => {
     try {

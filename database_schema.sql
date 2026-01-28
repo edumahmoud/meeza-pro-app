@@ -1,115 +1,129 @@
 -- ==========================================
--- MEEZA POS - FINANCIAL INTEGRITY FIX (v16.0)
+-- MEEZA POS - DATABASE STRUCTURE v20.0
+-- Focus: Accountability & Business Intelligence
 -- ==========================================
 
--- 1. وظيفة سداد مدفوعات الموردين الاحترافية (سداد دين + تحديث فاتورة + خصم خزينة)
-CREATE OR REPLACE FUNCTION public.process_supplier_payment_v2(
-  p_supplier_id UUID,
-  p_amount DECIMAL,
-  p_purchase_id UUID,
-  p_notes TEXT,
-  p_branch_id UUID,
-  p_created_by UUID
-) RETURNS VOID 
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-DECLARE
-  v_payment_id UUID := gen_random_uuid();
-  v_timestamp BIGINT := extract(epoch from now()) * 1000;
-BEGIN
-  -- أ. تسجيل الدفعة في جدول مدفوعات الموردين
-  INSERT INTO public.supplier_payments (
-    id, supplier_id, purchase_id, amount, notes, timestamp, date, time
-  ) VALUES (
-    v_payment_id, p_supplier_id, p_purchase_id, p_amount, p_notes, 
-    v_timestamp, 
-    to_char(now(), 'YYYY-MM-DD'), 
-    to_char(now(), 'HH24:MI:SS')
-  );
+-- 1. الفروع (Branches)
+CREATE TABLE IF NOT EXISTS public.branches (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    location TEXT,
+    phone TEXT,
+    operational_number TEXT UNIQUE,
+    tax_number TEXT,
+    commercial_register TEXT,
+    status TEXT DEFAULT 'active',
+    is_deleted BOOLEAN DEFAULT false,
+    deletion_reason TEXT,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
 
-  -- ب. تحديث مديونية المورد الإجمالية (الحساب المالي العام)
-  UPDATE public.suppliers 
-  SET 
-    total_paid = total_paid + p_amount,
-    total_debt = total_debt - p_amount
-  WHERE id = p_supplier_id;
+-- 2. الوظائف (App Roles)
+CREATE TABLE IF NOT EXISTS public.app_roles (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    role_key TEXT UNIQUE NOT NULL,
+    role_name TEXT NOT NULL,
+    seniority INTEGER DEFAULT 0,
+    is_system BOOLEAN DEFAULT false
+);
 
-  -- ج. تحديث المبلغ المتبقي في الفاتورة المحددة (إذا تم اختيار فاتورة بعينها)
-  IF p_purchase_id IS NOT NULL THEN
-    UPDATE public.purchase_records 
-    SET remaining_amount = remaining_amount - p_amount
-    WHERE id = p_purchase_id;
-  END IF;
+-- 3. الموظفين (Users)
+CREATE TABLE IF NOT EXISTS public.users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    username TEXT UNIQUE NOT NULL,
+    password TEXT NOT NULL,
+    full_name TEXT NOT NULL,
+    phone_number TEXT,
+    role TEXT REFERENCES public.app_roles(role_key),
+    salary NUMERIC DEFAULT 0,
+    branch_id UUID REFERENCES public.branches(id),
+    has_performance_tracking BOOLEAN DEFAULT true,
+    is_deleted BOOLEAN DEFAULT false,
+    deletion_reason TEXT,
+    days_worked_accumulated INTEGER DEFAULT 0,
+    total_days_worked INTEGER DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
 
-  -- د. تسجيل حركة "صرف" في خزينة الفرع (تظهر في السجل اليومي وحركة الصندوق)
-  INSERT INTO public.treasury_logs (
-    id, branch_id, type, source, reference_id, amount, notes, created_by, timestamp
-  ) VALUES (
-    gen_random_uuid(), p_branch_id, 'out', 'supplier_payment', 
-    v_payment_id::text, 
-    p_amount, 
-    'سداد دفعة للمورد: ' || p_notes, 
-    p_created_by, 
-    v_timestamp
-  );
-END;
-$$;
+-- 4. الأصناف (Products)
+CREATE TABLE IF NOT EXISTS public.products (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    code TEXT NOT NULL,
+    name TEXT NOT NULL,
+    wholesale_price NUMERIC DEFAULT 0,
+    retail_price NUMERIC DEFAULT 0,
+    offer_price NUMERIC,
+    stock NUMERIC DEFAULT 0,
+    branch_id UUID REFERENCES public.branches(id),
+    is_deleted BOOLEAN DEFAULT false,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
 
--- 2. وظيفة مرتجع الشراء الموحدة (خصم مخزن + تسوية حساب المورد + إيداع خزينة اختياري)
-CREATE OR REPLACE FUNCTION public.process_purchase_return_v2(
-  p_id UUID,
-  p_original_purchase_id UUID,
-  p_supplier_id UUID,
-  p_items JSONB,
-  p_total_refund DECIMAL,
-  p_refund_method TEXT, -- 'cash' or 'debt_deduction'
-  p_is_money_received BOOLEAN,
-  p_created_by UUID,
-  p_branch_id UUID,
-  p_notes TEXT
-) RETURNS VOID
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-DECLARE
-  item RECORD;
-  v_timestamp BIGINT := extract(epoch from now()) * 1000;
-BEGIN
-  -- أ. تسجيل المرتجع في الأرشيف
-  INSERT INTO public.purchase_returns (
-    id, original_purchase_id, supplier_id, items, total_refund, 
-    refund_method, is_money_received, date, time, timestamp, created_by, branch_id, notes
-  ) VALUES (
-    p_id, p_original_purchase_id, p_supplier_id, p_items, p_total_refund,
-    p_refund_method, p_is_money_received, 
-    to_char(now(), 'YYYY-MM-DD'), to_char(now(), 'HH24:MI:SS'),
-    v_timestamp, p_created_by, p_branch_id, p_notes
-  );
+-- 5. المبيعات (Sales Invoices)
+CREATE TABLE IF NOT EXISTS public.sales_invoices (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    items JSONB NOT NULL,
+    total_before_discount NUMERIC NOT NULL,
+    discount_value NUMERIC DEFAULT 0,
+    net_total NUMERIC NOT NULL,
+    created_by UUID REFERENCES public.users(id),
+    branch_id UUID REFERENCES public.branches(id),
+    timestamp BIGINT NOT NULL,
+    is_deleted BOOLEAN DEFAULT false
+);
 
-  -- ب. تحديث المخزن لكل صنف (إرجاع للمورد يعني نقص من رصيد المحل)
-  FOR item IN SELECT * FROM jsonb_to_recordset(p_items) AS x(product_id UUID, quantity DECIMAL)
-  LOOP
-    UPDATE public.products 
-    SET stock = stock - item.quantity 
-    WHERE id = item.product_id;
-  END LOOP;
+-- 6. المصروفات (Expenses) - مع تتبع الموظف والفرع
+CREATE TABLE IF NOT EXISTS public.expenses (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    description TEXT NOT NULL,
+    amount NUMERIC NOT NULL,
+    category TEXT DEFAULT 'general',
+    branch_id UUID REFERENCES public.branches(id),
+    created_by UUID REFERENCES public.users(id),
+    timestamp BIGINT NOT NULL,
+    notes TEXT
+);
 
-  -- ج. المعالجة المالية الموحدة للمرتجع
-  IF p_refund_method = 'debt_deduction' THEN
-    -- الحالة الأولى: خصم من المديونية (تقليل المبلغ الذي نطلبه من المورد)
-    UPDATE public.suppliers 
-    SET total_debt = total_debt - p_total_refund
-    WHERE id = p_supplier_id;
-  ELSIF p_refund_method = 'cash' AND p_is_money_received = true THEN
-    -- الحالة الثانية: استلام نقدي (إيداع المبلغ في خزينة الفرع)
-    INSERT INTO public.treasury_logs (
-      id, branch_id, type, source, reference_id, amount, notes, created_by, timestamp
-    ) VALUES (
-      gen_random_uuid(), p_branch_id, 'in', 'purchase_return', p_id::text,
-      p_total_refund, 'إيداع نقدي: مرتجع توريد من فاتورة', p_created_by,
-      v_timestamp
-    );
-  END IF;
-END;
-$$;
+-- 7. المرتجعات (Returns) - مع تتبع الموظف والفرع
+CREATE TABLE IF NOT EXISTS public.returns (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    invoice_id UUID REFERENCES public.sales_invoices(id),
+    items JSONB NOT NULL,
+    total_refund NUMERIC NOT NULL,
+    branch_id UUID REFERENCES public.branches(id),
+    created_by UUID REFERENCES public.users(id),
+    timestamp BIGINT NOT NULL,
+    is_deleted BOOLEAN DEFAULT false
+);
+
+-- 8. سجل الرقابة (Audit Logs)
+CREATE TABLE IF NOT EXISTS public.audit_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID,
+    username TEXT,
+    action_type TEXT,
+    entity_type TEXT,
+    entity_id UUID,
+    details TEXT,
+    timestamp BIGINT NOT NULL
+);
+
+-- ==========================================
+-- RELATIONAL QUERIES (BI SAMPLES)
+-- ==========================================
+
+-- A. جلب موظفي فرع معين:
+-- SELECT * FROM users WHERE branch_id = 'BRANCH_ID' AND is_deleted = false;
+
+-- B. ترتيب الأصناف حسب حجم المبيعات داخل فرع معين:
+-- SELECT item->>'name' as product_name, SUM((item->>'quantity')::numeric) as total_sold
+-- FROM sales_invoices, jsonb_array_elements(items) as item
+-- WHERE branch_id = 'BRANCH_ID' AND is_deleted = false
+-- GROUP BY product_name
+-- ORDER BY total_sold DESC;
+
+-- C. استعلام تتبع مالي لموظف (Accountability):
+-- SELECT 'EXPENSE' as type, amount, description, timestamp FROM expenses WHERE created_by = 'USER_ID'
+-- UNION ALL
+-- SELECT 'SALE' as type, net_total as amount, 'Invoice Sale' as description, timestamp FROM sales_invoices WHERE created_by = 'USER_ID'
+-- ORDER BY timestamp DESC;

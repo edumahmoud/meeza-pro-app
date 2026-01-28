@@ -4,8 +4,7 @@ import {
   LayoutDashboard, ShoppingCart, Package, RotateCcw, Wallet, 
   BarChart3, Archive, Bell, ShieldCheck, AlertCircle, Mail,
   Trash2, Menu, LogOut, UserCog, Landmark, Terminal, Truck, Clock, X, UserCircle, History, Users, ChevronLeft, BellRing, Inbox, ClipboardCheck, Building2, Printer, Copy, PackageX, AlertTriangle, Eye, Barcode,
-  // Added CheckCircle2 and Settings to fix missing icon errors
-  CheckCircle2, Settings
+  CheckCircle2, Settings, UserPlus
 } from 'lucide-react';
 import { ViewType, Product, User as UserType, SystemSettings, LeaveRequest, Correspondence } from '../types';
 
@@ -29,7 +28,7 @@ interface LayoutProps {
   messages?: Correspondence[];
   onReset: () => void;
   onRestore: (data: any) => void;
-  children: React.ReactNode;
+  children?: React.ReactNode;
   toast: { message: string; type: 'success' | 'error' } | null;
   onCloseToast: () => void;
   user: UserType;
@@ -41,31 +40,28 @@ interface LayoutProps {
   checkPermission: (user: any, action: any) => boolean;
 }
 
-const Layout: React.FC<LayoutProps> = ({ 
+const Layout = ({ 
   currentView, setView, products, leaveRequests = [], messages = [], children, toast, onCloseToast, 
   user, onLogout, settings, users = [], roles = [], branches = [], checkPermission
-}) => {
+}: LayoutProps) => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
-  const [selectedNotifProduct, setSelectedNotifProduct] = useState<Product | null>(null);
+  const [selectedNotifProduct, setSelectedNotifProduct] = useState(null as Product | null);
   
-  const notifRef = useRef<HTMLDivElement>(null);
+  const notifRef = useRef(null as HTMLDivElement | null);
 
-  // 1. حساب نواقص المخزون
   const lowStockItems = useMemo(() => {
     const list = Array.isArray(products) ? products : [];
     return list.filter(p => !p.isDeleted && p.stock <= p.lowStockThreshold)
-      .sort((a, b) => a.stock - b.stock); // النافذ أولاً
+      .sort((a, b) => a.stock - b.stock);
   }, [products]);
 
-  // 2. تحديث الوقت
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
-  // 3. إغلاق القوائم عند الضغط خارجها
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
@@ -76,7 +72,6 @@ const Layout: React.FC<LayoutProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // 4. باركود المودال السريع
   useEffect(() => {
     if (selectedNotifProduct) {
       setTimeout(() => {
@@ -124,7 +119,8 @@ const Layout: React.FC<LayoutProps> = ({
     { id: 'sales', label: 'نقطة البيع', icon: ShoppingCart },
     { id: 'correspondence', label: 'المراسلات والطلبات', icon: Mail },
     { id: 'inventory', label: 'المخزن', icon: Package },
-    { id: 'purchases', label: 'التوريدات', icon: Truck }, 
+    { id: 'purchases', label: 'المشتريات', icon: Truck }, 
+    { id: 'suppliers', label: 'الموردين', icon: UserPlus },
     { id: 'customers', label: 'العملاء', icon: Users },
     { id: 'expenses', label: 'المصاريف', icon: Wallet },
     { id: 'treasury', label: 'الخزنة', icon: Landmark },
@@ -143,17 +139,14 @@ const Layout: React.FC<LayoutProps> = ({
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden font-['Cairo']" dir="rtl">
-      {/* Toast Notification */}
       {toast && (
         <div className={`fixed top-5 left-5 z-[10000] flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl animate-in slide-in-from-left duration-300 ${toast.type === 'success' ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'}`}>
-           {/* Fix: CheckCircle2 is now imported from lucide-react */}
            {toast.type === 'success' ? <CheckCircle2 size={20}/> : <AlertCircle size={20}/>}
            <span className="text-xs font-black">{toast.message}</span>
            <button onClick={onCloseToast} className="mr-4 hover:opacity-50"><X size={16}/></button>
         </div>
       )}
 
-      {/* Sidebar Overlay for Mobile/Medium Screens - Added to satisfy request */}
       {isSidebarOpen && (
         <div 
           className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[55] lg:hidden transition-opacity animate-in fade-in duration-300"
@@ -195,7 +188,6 @@ const Layout: React.FC<LayoutProps> = ({
           </div>
           
           <div className="flex items-center gap-4">
-             {/* جرس إشعارات المخزون */}
              <div className="relative" ref={notifRef}>
                 <button 
                   onClick={() => setIsNotifOpen(!isNotifOpen)}
@@ -264,7 +256,6 @@ const Layout: React.FC<LayoutProps> = ({
         <div className="flex-1 overflow-y-auto p-8 scrollbar-hide">{children}</div>
       </main>
 
-      {/* مودال تفاصيل الصنف السريع (عند الضغط من الإشعارات) */}
       {selectedNotifProduct && (
         <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[10000] flex items-center justify-center p-4">
            <div className="bg-white rounded-[2.5rem] w-full max-w-xl shadow-2xl overflow-hidden animate-in zoom-in-95">
@@ -279,7 +270,7 @@ const Layout: React.FC<LayoutProps> = ({
                  <button onClick={() => setSelectedNotifProduct(null)} className="p-2 hover:bg-white/10 rounded-xl transition-colors"><X size={24}/></button>
               </div>
               <div className="p-8 space-y-8">
-                 <div className="text-center space-y-2">
+                 <div className="text-center space-y-1">
                     <h2 className="text-2xl font-black text-slate-800">{selectedNotifProduct.name}</h2>
                     <p className="text-xs text-slate-400 font-bold flex items-center justify-center gap-2 uppercase tracking-widest">
                        كود الصنف: <span className="text-indigo-600">#{selectedNotifProduct.code}</span>
@@ -311,7 +302,6 @@ const Layout: React.FC<LayoutProps> = ({
                       onClick={() => { setView('inventory'); setSelectedNotifProduct(null); }} 
                       className="flex-[2] py-4 bg-indigo-600 text-white font-black rounded-2xl text-xs shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
                     >
-                      {/* Fix: Settings is now imported from lucide-react */}
                       <Settings size={16}/> التوجه للمخزن للتعديل
                     </button>
                  </div>

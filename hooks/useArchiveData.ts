@@ -1,10 +1,9 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { ArchiveRecord } from '../types';
 import { supabase } from '../supabaseClient';
 
 export const useArchiveData = () => {
-  const [archive, setArchive] = useState<ArchiveRecord[]>([]);
+  const [archive, setArchive] = useState([] as ArchiveRecord[]);
   const [loading, setLoading] = useState(true);
 
   const fetchArchive = useCallback(async () => {

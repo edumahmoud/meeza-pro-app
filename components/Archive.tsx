@@ -1,9 +1,6 @@
-
 import React, { useState, useMemo, useRef } from 'react';
-import { Search, Eye, X, Trash2, FileText, Receipt, ArrowUpDown, Tag, Percent, Star, Printer, Smartphone, DownloadCloud, Share2, ChevronLeft, ChevronRight, RotateCcw, PlusCircle, RefreshCw } from 'lucide-react';
+import { Search, Eye, X, Trash2, Receipt, ChevronLeft, ChevronRight, RefreshCw, Archive as ArchiveIcon, FileText } from 'lucide-react';
 import { Invoice, User as UserType, Branch, SystemSettings, ReturnRecord } from '../types';
-import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
 import { copyToClipboard } from './Layout';
 
 interface ArchiveProps {
@@ -18,16 +15,15 @@ interface ArchiveProps {
   askConfirmation: (title: string, message: string, onConfirm: () => void, variant?: 'danger' | 'warning' | 'info') => void;
 }
 
-const Archive: React.FC<ArchiveProps> = ({ invoices, returns = [], branches, settings, onDeleteInvoice, onShowToast, user, canDelete, askConfirmation }) => {
-  const [activeTab, setActiveTab] = useState<'daily' | 'monthly' | 'yearly'>('daily');
+const Archive = ({ invoices, branches, settings, onDeleteInvoice, onShowToast, user, canDelete, askConfirmation }: ArchiveProps) => {
+  const [activeTab, setActiveTab] = useState('daily' as 'daily' | 'monthly' | 'yearly');
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [search, setSearch] = useState('');
   const [visibleCount, setVisibleCount] = useState(50);
-  const [confirmDelete, setConfirmDelete] = useState<{id: string, reason: string} | null>(null);
-  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(null as {id: string, reason: string} | null);
+  const [selectedInvoice, setSelectedInvoice] = useState(null as Invoice | null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>({ key: 'timestamp', direction: 'desc' });
-  const invoiceRef = useRef<HTMLDivElement>(null);
+  const [sortConfig, setSortConfig] = useState({ key: 'timestamp', direction: 'desc' } as { key: string, direction: 'asc' | 'desc' } | null);
 
   const formattedSelectedDate = selectedDate.toLocaleDateString('ar-EG');
   const dateDisplayLabel = useMemo(() => {
@@ -56,17 +52,10 @@ const Archive: React.FC<ArchiveProps> = ({ invoices, returns = [], branches, set
     if (!isHQ) list = list.filter(inv => inv.branchId === user.branchId);
     if (search.trim()) {
       const term = search.toLowerCase();
-      list = list.filter(inv => inv.id.toLowerCase().includes(term) || inv.customerName?.toLowerCase().includes(term) || inv.customerPhone?.includes(term));
-    }
-    if (sortConfig) {
-      list.sort((a: any, b: any) => {
-        if (a[sortConfig.key] < b[sortConfig.key]) return sortConfig.direction === 'asc' ? -1 : 1;
-        if (a[sortConfig.key] > b[sortConfig.key]) return sortConfig.direction === 'asc' ? 1 : -1;
-        return 0;
-      });
+      list = list.filter(inv => inv.id.toLowerCase().includes(term) || inv.customerName?.toLowerCase().includes(term));
     }
     return list;
-  }, [invoices, search, sortConfig, user.role, user.branchId, activeTab, formattedSelectedDate, selectedDate]);
+  }, [invoices, search, user.role, user.branchId, activeTab, formattedSelectedDate, selectedDate]);
 
   const displayList = useMemo(() => filtered.slice(0, visibleCount), [filtered, visibleCount]);
 
@@ -83,6 +72,21 @@ const Archive: React.FC<ArchiveProps> = ({ invoices, returns = [], branches, set
 
   return (
     <div className="space-y-8 animate-in font-['Cairo'] pb-12 select-text" dir="rtl">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm flex items-center gap-4">
+           <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl"><ArchiveIcon size={24}/></div>
+           <div><p className="text-slate-400 text-[9px] font-black uppercase mb-1">إجمالي الفواتير</p><h3 className="text-xl font-black">{filtered.length} عملية</h3></div>
+        </div>
+        <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm flex items-center gap-4">
+           <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl"><FileText size={24}/></div>
+           <div><p className="text-slate-400 text-[9px] font-black uppercase mb-1">إجمالي الإيراد</p><h3 className="text-xl font-black">{filtered.reduce((a,b)=>a+b.netTotal, 0).toLocaleString()} ج.م</h3></div>
+        </div>
+        <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm flex items-center gap-4">
+           <div className="p-3 bg-amber-50 text-amber-600 rounded-2xl"><Receipt size={24}/></div>
+           <div><p className="text-slate-400 text-[9px] font-black uppercase mb-1">أعلى قيمة فاتورة</p><h3 className="text-xl font-black">{Math.max(0, ...filtered.map(f=>f.netTotal)).toLocaleString()}</h3></div>
+        </div>
+      </div>
+
       <div className="bg-white p-4 md:p-6 rounded-[2.5rem] border border-slate-200 shadow-sm flex flex-col xl:flex-row justify-between items-stretch xl:items-center gap-4">
         <div className="flex bg-slate-100 p-1.5 rounded-2xl w-full xl:max-w-md overflow-x-auto">
           {['daily', 'monthly', 'yearly'].map(tab => (
@@ -99,7 +103,7 @@ const Archive: React.FC<ArchiveProps> = ({ invoices, returns = [], branches, set
       
       <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden min-h-[400px]">
         <div className="overflow-x-auto">
-          <table className="w-full text-right text-[10px] min-w-[1200px]">
+          <table className="w-full text-right text-[10px] min-w-[1000px]">
             <thead className="bg-slate-50 text-slate-500 font-black uppercase text-[8px] border-b">
               <tr><th className="px-6 py-5">رقم السند</th><th className="px-6 py-5">العميل</th><th className="px-6 py-5">ملخص الأصناف</th><th className="px-6 py-5 text-center">الإجمالي</th><th className="px-6 py-5 text-center">الخصم</th><th className="px-6 py-5 text-center font-black">الصافي النهائي</th><th className="px-6 py-5 text-left">إدارة</th></tr>
             </thead>
@@ -112,34 +116,18 @@ const Archive: React.FC<ArchiveProps> = ({ invoices, returns = [], branches, set
                     <td className="px-6 py-4 text-center text-slate-500">{(inv.totalBeforeDiscount || 0).toLocaleString()}</td>
                     <td className="px-6 py-4 text-center text-rose-500">-{(inv.discountValue || 0).toLocaleString()}</td>
                     <td className="px-6 py-4 text-center font-black text-emerald-600 text-xs">{(inv.netTotal || 0).toLocaleString()}</td>
-                    <td className="px-6 py-4 text-left"><div className="flex gap-2 justify-end opacity-0 group-hover:opacity-100"><button onClick={() => setSelectedInvoice(inv)} className="p-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-600 hover:text-white transition-all"><Eye size={14} /></button>{canDelete && <button onClick={() => setConfirmDelete({id: inv.id, reason: ''})} className="p-2 bg-rose-50 text-rose-400 rounded-lg hover:bg-rose-600 hover:text-white transition-all"><Trash2 size={14} /></button>}</div></td>
+                    <td className="px-6 py-4 text-left">
+                       <div className="flex gap-2 justify-end opacity-0 group-hover:opacity-100">
+                          <button onClick={() => setSelectedInvoice(inv)} className="p-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-600 hover:text-white transition-all"><Eye size={14} /></button>
+                          {canDelete && <button onClick={() => setConfirmDelete({id: inv.id, reason: ''})} className="p-2 bg-rose-50 text-rose-400 rounded-lg hover:bg-rose-600 hover:text-white transition-all"><Trash2 size={14} /></button>}
+                       </div>
+                    </td>
                   </tr>
               ))}
             </tbody>
           </table>
-          {visibleCount < filtered.length && (
-            <div className="p-6 bg-slate-50 flex justify-center border-t">
-               <button onClick={() => setVisibleCount(prev => prev + 50)} className="px-10 py-3 bg-white border border-slate-200 text-indigo-600 font-black rounded-xl text-xs flex items-center gap-2 hover:bg-indigo-600 hover:text-white transition-all shadow-sm"><PlusCircle size={18}/> عرض المزيد</button>
-            </div>
-          )}
         </div>
       </div>
-
-      {confirmDelete && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[3000] flex items-center justify-center p-4">
-           <div className="bg-white rounded-[2.5rem] w-full max-w-md shadow-2xl p-8 text-center space-y-6 animate-in zoom-in border border-rose-100">
-              <Trash2 size={40} className="text-rose-600 mx-auto" />
-              <h3 className="text-xl font-black text-slate-800">إلغاء الفاتورة؟</h3>
-              <textarea className="w-full p-4 bg-slate-50 border rounded-2xl text-xs font-bold outline-none resize-none h-24" placeholder="سبب الإلغاء..." value={confirmDelete.reason} onChange={e=>setConfirmDelete({...confirmDelete, reason:e.target.value})} />
-              <div className="flex gap-3">
-                 <button onClick={()=>setConfirmDelete(null)} className="flex-1 py-4 bg-slate-50 rounded-xl text-xs font-black text-slate-500">تراجع</button>
-                 <button onClick={handleDeleteFinal} disabled={!confirmDelete.reason || isDeleting} className="flex-[1.5] py-4 bg-rose-600 text-white rounded-xl text-xs font-black shadow-xl disabled:opacity-50">
-                   {isDeleting ? <RefreshCw className="animate-spin mx-auto" size={18}/> : 'تأكيد الإلغاء'}
-                 </button>
-              </div>
-           </div>
-        </div>
-      )}
     </div>
   );
 };

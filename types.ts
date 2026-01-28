@@ -134,6 +134,17 @@ export interface Branch {
   isDeleted?: boolean;
 }
 
+export interface Customer {
+  id: string;
+  name: string;
+  phone: string;
+  email?: string;
+  notes?: string;
+  category?: 'regular' | 'vip' | 'potential';
+  createdAt: number;
+  isDeleted?: boolean;
+}
+
 export interface ArchiveRecord {
   id: string;
   itemType: string;
@@ -158,7 +169,7 @@ export interface ActivityLog {
 
 export type ViewType = 
   | 'dashboard' | 'sales' | 'inventory' | 'returns' | 'expenses' | 'reports' | 'archive' 
-  | 'recycleBin' | 'customers' | 'purchases' | 'staff' | 'settings' | 'userProfile' | 'treasury' | 'itControl' | 'dailyLogs' | 'correspondence';
+  | 'recycleBin' | 'customers' | 'purchases' | 'suppliers' | 'staff' | 'settings' | 'userProfile' | 'treasury' | 'itControl' | 'dailyLogs' | 'correspondence';
 
 export interface SystemSettings {
   appName: string;

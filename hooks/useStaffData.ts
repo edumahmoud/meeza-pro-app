@@ -3,10 +3,10 @@ import { User, Branch, StaffPayment, UserRole, StaffPaymentType, LeaveRequest } 
 import { supabase } from '../supabaseClient';
 
 export const useStaffData = () => {
-  const [users, setUsers] = useState<User[]>([]);
-  const [branches, setBranches] = useState<Branch[]>([]);
-  const [staffPayments, setStaffPayments] = useState<StaffPayment[]>([]);
-  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
+  const [users, setUsers] = useState([] as User[]);
+  const [branches, setBranches] = useState([] as Branch[]);
+  const [staffPayments, setStaffPayments] = useState([] as StaffPayment[]);
+  const [leaveRequests, setLeaveRequests] = useState([] as LeaveRequest[]);
   const [loading, setLoading] = useState(true);
 
   const fetchStaffData = useCallback(async () => {
@@ -57,7 +57,7 @@ export const useStaffData = () => {
       if (leaveRes.data) {
         setLeaveRequests(leaveRes.data.map(l => ({
           id: l.id, userId: l.user_id, userName: l.user_name, userRole: l.user_role,
-          target_role: l.target_role,
+          targetRole: l.target_role,
           startDate: l.start_date, endDate: l.end_date, reason: l.reason,
           type: l.type || 'normal',
           status: l.status, timestamp: Number(l.timestamp),
@@ -74,10 +74,6 @@ export const useStaffData = () => {
 
   useEffect(() => {
     fetchStaffData();
-    const sub = supabase.channel('staff-sync-global')
-      .on('postgres_changes', {event:'*', table:'users'}, () => fetchStaffData())
-      .subscribe();
-    return () => { supabase.removeChannel(sub); };
   }, [fetchStaffData]);
 
   const addUser = async (role: UserRole, fullName: string, phone: string, salary: number, branchId: string, hasPerformance: boolean, birthDate: string) => {
@@ -101,7 +97,18 @@ export const useStaffData = () => {
     
     if (error) throw error;
     await fetchStaffData();
-    return { ...data, temporaryPassword: password };
+    
+    // Return mapped object to match User interface (camelCase)
+    return { 
+      id: data.id, 
+      username: data.username, 
+      fullName: data.full_name, 
+      role: data.role, 
+      salary: Number(data.salary), 
+      branchId: data.branch_id, 
+      phoneNumber: data.phone_number,
+      temporaryPassword: password 
+    };
   };
 
   const updateUser = async (userId: string, updates: any) => {
@@ -211,17 +218,13 @@ export const useStaffData = () => {
   };
 
   const updateUserRole = async (userId: string, newRole: UserRole) => {
-    // 1. جلب بيانات المستخدم الحالية
     const { data: user } = await supabase.from('users').select('username').eq('id', userId).single();
     if (!user) return;
 
-    // 2. معالجة الكود الجديد
-    // استخراج الجزء الرقمي من الكود الحالي (مثال: CA-1234 -> 1234)
     const currentNum = user.username.split('-')[1] || Math.floor(1000 + Math.random() * 9000);
     const newPrefix = newRole.slice(0, 2).toUpperCase();
     const newUsername = `${newPrefix}-${currentNum}`;
 
-    // 3. تحديث السجل في السحابة
     const { error } = await supabase.from('users').update({
       role: newRole,
       username: newUsername

@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { 
   ChevronRight, ChevronLeft, TrendingUp, FileSpreadsheet, Wallet, BarChart as BarChartIcon, 
@@ -19,8 +18,8 @@ interface ReportsProps {
   user: UserType;
 }
 
-const Reports: React.FC<ReportsProps> = ({ invoices, returns, expenses, purchases, supplierPayments, branches = [], user }) => {
-  const [activeTab, setActiveTab] = useState<'daily' | 'monthly' | 'yearly'>('daily');
+const Reports = ({ invoices, returns, expenses, purchases, supplierPayments, branches = [], user }: ReportsProps) => {
+  const [activeTab, setActiveTab] = useState('daily' as 'daily' | 'monthly' | 'yearly');
   const [selectedDate, setSelectedDate] = useState(new Date());
   
   const isHQAdmin = useMemo(() => ['admin', 'it_support', 'general_manager'].includes(user.role), [user.role]);
@@ -133,7 +132,6 @@ const Reports: React.FC<ReportsProps> = ({ invoices, returns, expenses, purchase
   const handleExportReport = () => {
     const wb = XLSX.utils.book_new();
 
-    // 1. Summary Sheet
     const summaryData = [
       { "البيان": "الفترة", "القيمة": dateDisplayLabel },
       { "البيان": "نطاق الفرع", "القيمة": currentBranchName },
@@ -146,7 +144,6 @@ const Reports: React.FC<ReportsProps> = ({ invoices, returns, expenses, purchase
     const wsSummary = XLSX.utils.json_to_sheet(summaryData);
     XLSX.utils.book_append_sheet(wb, wsSummary, "الملخص المالي");
 
-    // 2. Sales Sheet
     const salesData = filteredData.invoices.map(inv => ({
       "رقم الفاتورة": inv.id.slice(0, 8),
       "التاريخ": inv.date,
@@ -161,7 +158,6 @@ const Reports: React.FC<ReportsProps> = ({ invoices, returns, expenses, purchase
     const wsSales = XLSX.utils.json_to_sheet(salesData);
     XLSX.utils.book_append_sheet(wb, wsSales, "سجل المبيعات");
 
-    // 3. Returns Sheet
     const returnsData = filteredData.returns.map(ret => ({
       "رقم المرتجع": ret.id.slice(0, 8),
       "مرجع الفاتورة": ret.invoiceId.slice(0, 8),
@@ -171,7 +167,6 @@ const Reports: React.FC<ReportsProps> = ({ invoices, returns, expenses, purchase
     const wsReturns = XLSX.utils.json_to_sheet(returnsData);
     XLSX.utils.book_append_sheet(wb, wsReturns, "سجل المرتجعات");
 
-    // 4. Expenses Sheet
     const expensesData = filteredData.expenses.map(exp => ({
       "الوصف": exp.description,
       "المبلغ": exp.amount,
@@ -188,7 +183,6 @@ const Reports: React.FC<ReportsProps> = ({ invoices, returns, expenses, purchase
   return (
     <div className="space-y-8 animate-in font-['Cairo'] pb-12 select-text" dir="rtl">
       
-      {/* 1. Header & Controls */}
       <div className="bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-sm space-y-6">
         <div className="flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-6">
           <div className="flex bg-slate-100 p-1.5 rounded-2xl flex-1 overflow-x-auto shrink-0">
@@ -229,7 +223,6 @@ const Reports: React.FC<ReportsProps> = ({ invoices, returns, expenses, purchase
         </div>
       </div>
 
-      {/* 2. Main Financials */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm hover:border-indigo-600 transition-all">
           <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl w-fit mb-4"><ShoppingCart size={22} /></div>
@@ -253,7 +246,6 @@ const Reports: React.FC<ReportsProps> = ({ invoices, returns, expenses, purchase
         </div>
       </div>
 
-      {/* 3. Detailed Product Analysis (Best/Least Selling) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
          <div className="bg-white p-8 rounded-[3rem] border border-slate-200 shadow-sm flex flex-col">
             <div className="flex items-center gap-3 mb-6">
@@ -306,7 +298,6 @@ const Reports: React.FC<ReportsProps> = ({ invoices, returns, expenses, purchase
          </div>
       </div>
 
-      {/* 4. Chart Visualization (If not Daily) */}
       {activeTab !== 'daily' && (
          <div className="bg-white p-8 rounded-[3rem] border border-slate-200 shadow-sm">
             <div className="flex items-center justify-between mb-6">

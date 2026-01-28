@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Plus, ChevronRight, ChevronLeft, Wallet, ReceiptText, X, Calendar, Tag, Trash2, AlignRight, AlertCircle, Copy } from 'lucide-react';
 import { Expense, User as UserType } from '../types';
@@ -13,11 +12,11 @@ interface ExpensesProps {
   user: UserType;
 }
 
-const Expenses: React.FC<ExpensesProps> = ({ expenses, onAddExpense, onDeleteExpense, onShowToast, user }) => {
-  const [activeTab, setActiveTab] = useState<'daily' | 'monthly' | 'yearly'>('daily');
+const Expenses = ({ expenses, onAddExpense, onDeleteExpense, onShowToast, user }: ExpensesProps) => {
+  const [activeTab, setActiveTab] = useState('daily' as 'daily' | 'monthly' | 'yearly');
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isOpen, setIsOpen] = useState(false);
-  const [isConfirmingDelete, setIsConfirmingDelete] = useState<Expense | null>(null);
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(null as Expense | null);
   
   const [desc, setDesc] = useState('');
   const [amount, setAmount] = useState(0);

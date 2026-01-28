@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { 
   TrendingUp, TrendingDown, Package, Gem, RotateCcw, Landmark, AlertTriangle, ShoppingCart, Users, Award, ZapOff, ChevronUp, ChevronDown, Wallet, AreaChart as ChartIcon, Coins, ArrowUpRight, ArrowDownRight, BarChart3, Building2, ChevronRight, ChevronLeft, Calendar, PieChart as PieIcon, BarChart as BarIcon
@@ -23,8 +22,8 @@ interface DashboardProps {
   onProductClick?: (product: Product) => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ invoices, returns, expenses, products, staffPayments, user, branches = [] }) => {
-  const [activeTab, setActiveTab] = useState<'daily' | 'monthly' | 'yearly'>('daily');
+const Dashboard = ({ invoices, returns, expenses, products, staffPayments, user, branches = [] }: DashboardProps) => {
+  const [activeTab, setActiveTab] = useState('daily' as 'daily' | 'monthly' | 'yearly');
   const [selectedDate, setSelectedDate] = useState(new Date());
   
   const isAdmin = ['admin', 'it_support', 'general_manager'].includes(user.role);
@@ -216,9 +215,7 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, returns, expenses, prod
         </div>
       </div>
 
-      {/* 3. Middle Section: Dynamic Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-         {/* Trend Chart */}
          <div className="lg:col-span-2 bg-slate-900 p-8 rounded-[3rem] shadow-2xl relative overflow-hidden border border-white/5 h-[400px] flex flex-col">
             <div className="flex justify-between items-center mb-6">
                <div>
@@ -249,7 +246,6 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, returns, expenses, prod
             </div>
          </div>
 
-         {/* Distribution Pie Chart */}
          <div className="bg-white p-8 rounded-[3rem] border border-slate-100 shadow-sm h-[400px] flex flex-col">
             <div className="mb-6">
                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1 flex items-center gap-2"><PieIcon size={14}/> الهيكل المالي</p>
@@ -283,9 +279,7 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, returns, expenses, prod
          </div>
       </div>
 
-      {/* 4. Bottom Section: Bar Chart & Tables */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-         {/* Top Products Bar Chart */}
          <div className="lg:col-span-8 bg-white p-8 rounded-[3rem] border border-slate-100 shadow-sm h-[450px] flex flex-col">
             <div className="flex justify-between items-center mb-8">
                <div>
@@ -306,7 +300,6 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, returns, expenses, prod
             </div>
          </div>
 
-         {/* Low Selling Quick Table */}
          <div className="lg:col-span-4 bg-white p-8 rounded-[3rem] border border-slate-100 shadow-sm h-[450px] flex flex-col">
             <div className="flex items-center justify-between border-b pb-4 mb-4">
               <h4 className="font-black text-sm text-slate-800 flex items-center gap-2">

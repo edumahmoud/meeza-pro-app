@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { 
   Settings as SettingsIcon, 
@@ -32,7 +31,7 @@ const Settings: React.FC<SettingsProps> = ({ onShowToast, askConfirmation }) => 
   const [isDoubleConfirmed, setIsDoubleConfirmed] = useState(false);
   const [isTripleConfirmed, setIsTripleConfirmed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef(null as HTMLInputElement | null);
 
   const MASTER_ADMIN_ID = '00000000-0000-0000-0000-000000000000';
 

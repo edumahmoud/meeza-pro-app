@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { SystemSettings, PermissionOverride, User, ProceduralAction } from '../types';
 import { supabase } from '../supabaseClient';
@@ -12,7 +11,7 @@ export interface AppRole {
 }
 
 export const useSystemSettings = () => {
-  const [settings, setSettings] = useState<SystemSettings>({
+  const [settings, setSettings] = useState({
     appName: 'Meeza POS',
     logoUrl: '',
     currency: 'ج.م',
@@ -23,9 +22,9 @@ export const useSystemSettings = () => {
     userHiddenSections: {},
     roleHiddenActions: {},
     userHiddenActions: {}
-  });
-  const [overrides, setOverrides] = useState<PermissionOverride[]>([]);
-  const [roles, setRoles] = useState<AppRole[]>([]);
+  } as SystemSettings);
+  const [overrides, setOverrides] = useState([] as PermissionOverride[]);
+  const [roles, setRoles] = useState([] as AppRole[]);
   const [loading, setLoading] = useState(true);
 
   const fetchSettings = useCallback(async () => {
@@ -118,10 +117,7 @@ export const useSystemSettings = () => {
 
   const deleteRole = async (roleKey: string) => {
     if (roleKey === 'admin') throw new Error("لا يمكن حذف رتبة مدير النظام");
-    
-    // تأمين المستخدمين المرتبطين بالرتبة قبل حذفها لتجنب خطأ 23503
     await supabase.from('users').update({ role: 'employee' }).eq('role', roleKey);
-    
     const { error } = await supabase.from('app_roles').delete().eq('role_key', roleKey);
     if (error) throw error;
     await fetchSettings();
@@ -134,15 +130,12 @@ export const useSystemSettings = () => {
     
     const roleLower = (user.role || '').toLowerCase().trim();
     
-    // 1. مصفوفة الرتب (المنع يسبق السماح)
     if (settings.roleHiddenActions?.[roleLower]?.includes(action)) return false;
     if (settings.roleHiddenSections?.[roleLower]?.includes(action as any)) return false;
 
-    // 2. مصفوفة الموظف (تخصيص فردي)
     if (settings.userHiddenActions?.[user.username]?.includes(action)) return false;
     if (settings.userHiddenSections?.[user.username]?.includes(action as any)) return false;
 
-    // 3. الاستثناءات اليدوية (Overrides)
     const userOverride = overrides.find(o => o.targetType === 'user' && o.targetId === user.username && o.action === action);
     if (userOverride) return userOverride.isAllowed;
     

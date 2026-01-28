@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { Product, User } from '../types';
 import { supabase } from '../supabaseClient';
@@ -7,7 +6,7 @@ const isUUID = (id: any) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0
 const SYSTEM_ADMIN_ID = '00000000-0000-0000-0000-000000000000';
 
 export const useInventory = () => {
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState([] as Product[]);
   const [loading, setLoading] = useState(true);
 
   const fetchProducts = useCallback(async () => {
@@ -45,12 +44,18 @@ export const useInventory = () => {
   }, [fetchProducts]);
 
   const addProduct = async (name: string, description: string, wholesalePrice: number, retailPrice: number, stock: number, user: User) => {
+    // التحقق من تكرار الاسم برمجياً قبل المحاولة
+    const existing = products.find(p => !p.isDeleted && p.name.trim() === name.trim());
+    if (existing) {
+      throw new Error("هذا الاسم مسجل مسبقاً في المخزن، يرجى استخدامه بدلاً من إضافة صنف جديد.");
+    }
+
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     
     const { data, error } = await supabase
       .from('products')
       .insert([{
-        name,
+        name: name.trim(),
         description,
         wholesale_price: Number(wholesalePrice),
         retail_price: Number(retailPrice),
@@ -93,7 +98,7 @@ export const useInventory = () => {
 
   const updateProduct = async (id: string, updates: Partial<Product>, user: User) => {
     const dbUpdates: any = {};
-    if (updates.name !== undefined) dbUpdates.name = updates.name;
+    if (updates.name !== undefined) dbUpdates.name = updates.name.trim();
     if (updates.description !== undefined) dbUpdates.description = updates.description;
     if (updates.wholesalePrice !== undefined) dbUpdates.wholesale_price = updates.wholesalePrice;
     if (updates.retailPrice !== undefined) dbUpdates.retail_price = updates.retailPrice;

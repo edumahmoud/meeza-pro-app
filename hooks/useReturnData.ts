@@ -1,10 +1,9 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { ReturnRecord } from '../types';
 import { supabase } from '../supabaseClient';
 
 export const useReturnData = () => {
-  const [returns, setReturns] = useState<ReturnRecord[]>([]);
+  const [returns, setReturns] = useState([] as ReturnRecord[]);
   const [loading, setLoading] = useState(true);
 
   const fetchReturns = useCallback(async () => {

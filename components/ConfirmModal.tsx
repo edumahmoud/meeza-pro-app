@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { AlertTriangle, X, CheckCircle2 } from 'lucide-react';
 
@@ -13,10 +12,10 @@ interface ConfirmModalProps {
   variant?: 'danger' | 'warning' | 'info';
 }
 
-const ConfirmModal: React.FC<ConfirmModalProps> = ({ 
+const ConfirmModal = ({ 
   isOpen, title, message, onConfirm, onCancel, 
   confirmText = "تأكيد الإجراء", cancelText = "إلغاء", variant = 'danger' 
-}) => {
+}: ConfirmModalProps) => {
   if (!isOpen) return null;
 
   const colors = {

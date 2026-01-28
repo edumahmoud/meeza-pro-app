@@ -1,10 +1,9 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { Shift, User } from '../types';
 import { supabase } from '../supabaseClient';
 
 export const useShiftData = (user: User | null) => {
-  const [activeShift, setActiveShift] = useState<Shift | null>(null);
+  const [activeShift, setActiveShift] = useState(null as Shift | null);
   const [loading, setLoading] = useState(true);
 
   const checkActiveShift = useCallback(async () => {

@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Trash2, History, Search, Coins, ShoppingCart, DollarSign, Eye, X, Info, Calendar, Hash, User, ShieldAlert, AlertTriangle, ArrowUpDown } from 'lucide-react';
 import { ArchiveRecord, User as UserType } from '../types';
@@ -9,10 +8,10 @@ interface RecycleBinProps {
   user: UserType;
 }
 
-const RecycleBin: React.FC<RecycleBinProps> = ({ archiveRecords, onShowToast, user }) => {
+const RecycleBin = ({ archiveRecords, onShowToast, user }: RecycleBinProps) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedRecord, setSelectedRecord] = useState<ArchiveRecord | null>(null);
-  const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>({ key: 'timestamp', direction: 'desc' });
+  const [selectedRecord, setSelectedRecord] = useState(null as ArchiveRecord | null);
+  const [sortConfig, setSortConfig] = useState({ key: 'timestamp', direction: 'desc' } as { key: string, direction: 'asc' | 'desc' } | null);
 
   const filtered = useMemo(() => {
     let list = archiveRecords.filter(r => 

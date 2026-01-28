@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { SystemSettings, PermissionOverride, User } from '../types';
 import { supabase } from '../supabaseClient';
@@ -12,8 +11,8 @@ export interface AppRole {
 }
 
 export const useSystemSettings = () => {
-  // Initialize settings with required inventory_method
-  const [settings, setSettings] = useState<SystemSettings>({
+  // Initialize settings with required inventory_method using type assertion
+  const [settings, setSettings] = useState({
     appName: 'Meeza POS',
     logoUrl: '',
     currency: 'ج.م',
@@ -22,9 +21,9 @@ export const useSystemSettings = () => {
     inventory_method: 'WAC',
     roleHiddenSections: {},
     userHiddenSections: {}
-  });
-  const [overrides, setOverrides] = useState<PermissionOverride[]>([]);
-  const [roles, setRoles] = useState<AppRole[]>([]);
+  } as SystemSettings);
+  const [overrides, setOverrides] = useState([] as PermissionOverride[]);
+  const [roles, setRoles] = useState([] as AppRole[]);
   const [loading, setLoading] = useState(true);
 
   const fetchSettings = useCallback(async () => {

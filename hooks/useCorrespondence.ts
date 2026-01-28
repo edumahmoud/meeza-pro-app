@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { Correspondence, User } from '../types';
 import { supabase } from '../supabaseClient';
@@ -11,7 +10,7 @@ export interface CorrespondenceWithCode extends Correspondence {
 }
 
 export const useCorrespondence = (user: User | null) => {
-  const [messages, setMessages] = useState<CorrespondenceWithCode[]>([]);
+  const [messages, setMessages] = useState([] as CorrespondenceWithCode[]);
   const [loading, setLoading] = useState(true);
 
   const fetchMessages = useCallback(async () => {

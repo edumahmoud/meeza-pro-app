@@ -1,8 +1,7 @@
-
 import React, { useState, useMemo } from 'react';
 import { 
   RotateCcw, Search, Calendar, User, Package, Hash, 
-  ArrowLeft, X, CheckCircle2, RefreshCw, AlertTriangle
+  ArrowLeft, X, CheckCircle2, RefreshCw, AlertTriangle, Clock
 } from 'lucide-react';
 import { Invoice, ReturnRecord, User as UserType, ReturnItem } from '../types';
 import { supabase } from '../supabaseClient';
@@ -18,12 +17,12 @@ interface ReturnsProps {
   canReturn: boolean;
 }
 
-const Returns: React.FC<ReturnsProps> = ({ 
+const Returns = ({ 
   invoices, returns, onAddReturn, onDeleteReturn, onRestockItem, onShowToast, user, canReturn 
-}) => {
+}: ReturnsProps) => {
   const [invoiceId, setInvoiceId] = useState('');
-  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
-  const [returnItems, setReturnItems] = useState<Record<string, number>>({});
+  const [selectedInvoice, setSelectedInvoice] = useState(null as Invoice | null);
+  const [returnItems, setReturnItems] = useState({} as Record<string, number>);
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handleSearch = () => {
@@ -52,7 +51,6 @@ const Returns: React.FC<ReturnsProps> = ({
     if (!selectedInvoice) return;
     if (!canReturn) return onShowToast("لا تملك صلاحية تنفيذ المرتجعات", "error");
     
-    // Fix: Cast Object.entries to [string, number][] to resolve 'unknown' qty type error
     const items: ReturnItem[] = (Object.entries(returnItems) as [string, number][])
       .filter(([_, qty]) => qty > 0)
       .map(([productId, qty]) => {
@@ -70,7 +68,6 @@ const Returns: React.FC<ReturnsProps> = ({
     
     setIsProcessing(true);
     try {
-      // تنفيذ المرتجع كـ Transaction عبر RPC لضمان تماسك البيانات
       const { error } = await supabase.rpc('process_return_transaction', {
         p_id: crypto.randomUUID(),
         p_invoice_id: selectedInvoice.id,
@@ -104,13 +101,13 @@ const Returns: React.FC<ReturnsProps> = ({
             <input 
               type="text" 
               placeholder="ابحث برقم السند للإرجاع..." 
-              className="w-full pr-12 pl-4 py-3 bg-slate-50 border-none rounded-2xl outline-none font-bold text-sm"
+              className="w-full pr-12 pl-4 py-3 bg-slate-50 border-none rounded-2xl outline-none font-bold text-sm shadow-inner transition-all focus:ring-4 focus:ring-indigo-500/5"
               value={invoiceId}
               onChange={e => setInvoiceId(e.target.value)}
               onKeyPress={e => e.key === 'Enter' && handleSearch()}
             />
           </div>
-          <button onClick={handleSearch} className="px-8 py-3 bg-indigo-600 text-white rounded-xl font-black text-xs shrink-0 shadow-lg">بحث</button>
+          <button onClick={handleSearch} className="px-8 py-3 bg-indigo-600 text-white rounded-xl font-black text-xs shrink-0 shadow-lg hover:bg-indigo-700 transition-all">بحث</button>
         </div>
       </div>
 
@@ -141,7 +138,7 @@ const Returns: React.FC<ReturnsProps> = ({
                             <div className="flex justify-center items-center gap-3">
                               <input 
                                 type="number" 
-                                className="w-16 p-2 bg-white border border-slate-200 rounded-lg text-center font-black text-xs"
+                                className="w-16 p-2 bg-white border border-slate-200 rounded-lg text-center font-black text-xs outline-none focus:border-indigo-600"
                                 value={returnItems[item.productId] || 0}
                                 onChange={e => updateReturnQty(item.productId, Number(e.target.value))}
                               />
@@ -164,7 +161,6 @@ const Returns: React.FC<ReturnsProps> = ({
                   <div className="flex justify-between text-slate-400"><span>العميل:</span><span>{selectedInvoice.customerName || 'نقدي'}</span></div>
                   <div className="pt-4 border-t border-slate-50 flex justify-between text-lg font-black text-rose-600">
                      <span>إجمالي الرد:</span>
-                     {/* Fix: Explicitly cast Object.entries to [string, number][] to fix 'unknown' qty inference in arithmetic operations */}
                      <span>{(Object.entries(returnItems) as [string, number][]).reduce((acc, [pid, qty]) => {
                         const item = selectedInvoice.items.find(i => i.productId === pid);
                         return acc + (qty * (item?.unitPrice || 0));
@@ -178,7 +174,7 @@ const Returns: React.FC<ReturnsProps> = ({
                >
                   {isProcessing ? <RefreshCw className="animate-spin" size={20}/> : <RotateCcw size={20}/>} تنفيذ عملية الإرجاع
                </button>
-               <button onClick={() => setSelectedInvoice(null)} className="w-full py-3 bg-white border border-slate-200 text-slate-400 rounded-xl font-black text-xs">إلغاء</button>
+               <button onClick={() => setSelectedInvoice(null)} className="w-full py-3 bg-white border border-slate-200 text-slate-400 rounded-xl font-black text-xs hover:bg-slate-50 transition-all">إلغاء</button>
             </div>
           </div>
         </div>
@@ -186,19 +182,28 @@ const Returns: React.FC<ReturnsProps> = ({
         <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden min-h-[400px]">
            <table className="w-full text-right text-[11px] font-bold">
               <thead className="bg-slate-50 text-slate-400 uppercase text-[8px] border-b">
-                 <tr><th className="px-8 py-5">رقم المرتجع</th><th className="px-8 py-5">رقم الفاتورة الأصلية</th><th className="px-8 py-5 text-center">المبلغ المسترد</th><th className="px-8 py-5 text-left">التوقيت</th></tr>
+                 <tr>
+                    <th className="px-8 py-5">رقم المرتجع</th>
+                    <th className="px-8 py-5">المسؤول</th>
+                    <th className="px-8 py-5">رقم السند الأصلي</th>
+                    <th className="px-8 py-5 text-center">المبلغ المسترد</th>
+                    <th className="px-8 py-5 text-center">الوقت</th>
+                    <th className="px-8 py-5 text-left">التاريخ</th>
+                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                  {returns.map(r => (
-                   <tr key={r.id} className="hover:bg-slate-50/50">
+                   <tr key={r.id} className="hover:bg-slate-50/50 transition-all">
                       <td className="px-8 py-4 text-rose-600 font-black">#{r.id.slice(-6)}</td>
+                      <td className="px-8 py-4 text-slate-400 text-[10px]">{r.createdBy || '---'}</td>
                       <td className="px-8 py-4 text-indigo-600">#{r.invoiceId.slice(-6)}</td>
                       <td className="px-8 py-4 text-center font-black">{r.totalRefund.toLocaleString()} ج.م</td>
-                      <td className="px-8 py-4 text-left text-slate-400">{r.time}</td>
+                      <td className="px-8 py-4 text-center text-slate-400 text-[9px] font-mono">{r.time}</td>
+                      <td className="px-8 py-4 text-left text-slate-400 text-[9px] font-mono">{r.date}</td>
                    </tr>
                  ))}
                  {returns.length === 0 && (
-                   <tr><td colSpan={4} className="py-20 text-center opacity-20 italic">لا يوجد سجلات مرتجعات حالياً</td></tr>
+                   <tr><td colSpan={6} className="py-24 text-center opacity-20 italic font-black text-slate-300">لا يوجد سجلات مرتجعات حالياً</td></tr>
                  )}
               </tbody>
            </table>

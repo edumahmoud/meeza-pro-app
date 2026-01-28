@@ -1,13 +1,12 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { PurchaseRecord, Supplier, SupplierPayment, User, PurchaseReturnRecord } from '../types';
 import { supabase } from '../supabaseClient';
 
 export const usePurchaseData = () => {
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [purchases, setPurchases] = useState<PurchaseRecord[]>([]);
-  const [payments, setPayments] = useState<SupplierPayment[]>([]);
-  const [purchaseReturns, setPurchaseReturns] = useState<PurchaseReturnRecord[]>([]);
+  const [suppliers, setSuppliers] = useState([] as Supplier[]);
+  const [purchases, setPurchases] = useState([] as PurchaseRecord[]);
+  const [payments, setPayments] = useState([] as SupplierPayment[]);
+  const [purchaseReturns, setPurchaseReturns] = useState([] as PurchaseReturnRecord[]);
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
@@ -120,7 +119,6 @@ export const usePurchaseData = () => {
   };
 
   const addPurchaseReturn = async (record: PurchaseReturnRecord, user: User) => {
-    // استخدام الوظيفة الذرية الجديدة v2 لضمان صحة البيانات
     const dbItems = record.items.map(it => ({
         product_id: it.productId,
         name: it.name,
@@ -153,7 +151,6 @@ export const usePurchaseData = () => {
   };
 
   const addSupplierPayment = async (sId: string, amt: number, pId: string | null, notes: string, user: User) => {
-    // استخدام الوظيفة الذرية الجديدة v2 لضمان خصم الخزينة وتحديث الفاتورة
     const { error } = await supabase.rpc('process_supplier_payment_v2', {
       p_supplier_id: sId,
       p_amount: Number(amt),

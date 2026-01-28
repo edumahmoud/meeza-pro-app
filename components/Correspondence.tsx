@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { 
   Mail, Send, Search, Users, ShieldCheck, Briefcase, Clock, Calendar, 
@@ -38,15 +37,15 @@ const CorrespondenceView: React.FC<CorrespondenceProps> = ({
   onUpdateLeaveMeta, onDeleteLeavePermanent, onClearLeaves, onShowToast,
   askConfirmation, onUpdateLeaveStatus, onEmptyTrash, checkPermission
 }) => {
-  const [activeTab, setActiveTab] = useState<'inbox' | 'requests' | 'myLeaves' | 'sent' | 'archive' | 'trash'>('inbox');
+  const [activeTab, setActiveTab] = useState('inbox' as 'inbox' | 'requests' | 'myLeaves' | 'sent' | 'archive' | 'trash');
   const [isNewMsgOpen, setIsNewMsgOpen] = useState(false);
   const [isLeaveOpen, setIsLeaveOpen] = useState(false);
-  const [selectedMsg, setSelectedMsg] = useState<any | null>(null);
-  const [selectedLeave, setSelectedLeave] = useState<LeaveRequest | null>(null);
+  const [selectedMsg, setSelectedMsg] = useState(null as any | null);
+  const [selectedLeave, setSelectedLeave] = useState(null as LeaveRequest | null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [rejectionNote, setRejectionNote] = useState('');
 
-  const [selectedRecipients, setSelectedRecipients] = useState<User[]>([]);
+  const [selectedRecipients, setSelectedRecipients] = useState([] as User[]);
   const [userSearchTerm, setUserSearchTerm] = useState('');
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [msgForm, setMsgForm] = useState({ subject: '', content: '', isBroadcast: false });
@@ -166,7 +165,7 @@ const CorrespondenceView: React.FC<CorrespondenceProps> = ({
              return (
                <div key={d.id} className={`p-6 flex items-center gap-6 group hover:bg-slate-50/50 transition-all ${isMsg && !d.isRead && activeTab === 'inbox' ? 'bg-indigo-50/30 border-r-4 border-indigo-600' : ''}`}>
                   <div onClick={() => { if(isMsg) { setSelectedMsg(d); if(activeTab === 'inbox') onMarkAsRead(d.id); } else { setSelectedLeave(d); } }} className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg shrink-0 shadow-inner cursor-pointer ${isMsg ? 'bg-indigo-50 text-indigo-600' : 'bg-amber-50 text-amber-600'}`}>
-                    {isMsg ? (activeTab === 'sent' ? <Send size={20}/> : (d.senderName?.[0] || 'M')) : <BellRing size={20} className="text-amber-500"/>}
+                    {isMsg ? (activeTab === 'sent' ? <Send size={20}/> : ((d.senderName || '?')[0])) : <BellRing size={20} className="text-amber-500"/>}
                   </div>
                   <div className="flex-1 min-w-0 cursor-pointer" onClick={() => { if(isMsg) { setSelectedMsg(d); if(activeTab === 'inbox') onMarkAsRead(d.id); } else { setSelectedLeave(d); } }}>
                      <h4 className="font-black text-slate-800 text-xs truncate">{isMsg ? d.subject : `إجازة: ${d.userName}`} {!isMsg && <span className={`mr-2 text-[8px] font-black uppercase ${statusColor}`}>[{d.status}]</span>}</h4>
@@ -223,7 +222,7 @@ const CorrespondenceView: React.FC<CorrespondenceProps> = ({
                            <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-xl shadow-xl z-20 overflow-hidden divide-y">
                               {userOptions.map(u => (
                                 <button key={u.id} onClick={() => { setSelectedRecipients(prev => [...prev, u]); setUserSearchTerm(''); setShowUserDropdown(false); }} className="w-full p-3 text-right hover:bg-slate-50 flex items-center gap-3">
-                                   <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center font-black text-[10px]">{u.fullName[0]}</div>
+                                   <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center font-black text-[10px]">{(u.fullName || '?')[0]}</div>
                                    <div><p className="text-xs font-black">{u.fullName}</p><p className="text-[9px] text-slate-400 uppercase">{u.role}</p></div>
                                 </button>
                               ))}
@@ -275,7 +274,7 @@ const CorrespondenceView: React.FC<CorrespondenceProps> = ({
               <div className="p-8 space-y-6">
                  <div className="flex justify-between items-start">
                     <div className="flex items-center gap-4">
-                       <div className="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center text-white text-xl font-black shadow-lg shadow-indigo-100">{selectedMsg.senderName[0]}</div>
+                       <div className="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center text-white text-xl font-black shadow-lg shadow-indigo-100">{(selectedMsg.senderName || '?')[0]}</div>
                        <div>
                           <h2 className="text-xl font-black text-slate-800">{selectedMsg.subject}</h2>
                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">من: {selectedMsg.senderName} ({selectedMsg.senderRole})</p>
