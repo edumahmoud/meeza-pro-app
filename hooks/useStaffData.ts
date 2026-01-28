@@ -109,9 +109,6 @@ export const useStaffData = () => {
     };
   };
 
-  /**
-   * Fix for Error in file App.tsx on line 118: Property 'updateUser' does not exist
-   */
   const updateUser = async (userId: string, updates: Partial<User>) => {
     const dbUpdates: any = {};
     if (updates.fullName) dbUpdates.full_name = updates.fullName;
@@ -128,18 +125,12 @@ export const useStaffData = () => {
     await fetchStaffData();
   };
 
-  /**
-   * Fix for Error in file App.tsx on line 118: Property 'deleteUserPermanent' does not exist
-   */
   const deleteUserPermanent = async (id: string) => {
     const { error } = await supabase.from('users').delete().eq('id', id);
     if (error) throw error;
     await fetchStaffData();
   };
 
-  /**
-   * Fix for Error in file App.tsx on line 118: Property 'addStaffPayment' does not exist
-   */
   const addStaffPayment = async (staffId: string, amount: number, paymentType: StaffPaymentType, notes?: string, creatorId?: string) => {
     const { error } = await supabase.from('staff_payments').insert([{
       staff_id: staffId,
@@ -153,18 +144,12 @@ export const useStaffData = () => {
     await fetchStaffData();
   };
 
-  /**
-   * Fix for Error in file App.tsx on line 118 & 126: Property 'updateLeaveStatus' does not exist
-   */
   const updateLeaveStatus = async (id: string, status: 'approved' | 'rejected') => {
     const { error } = await supabase.from('leave_requests').update({ status }).eq('id', id);
     if (error) throw error;
     await fetchStaffData();
   };
 
-  /**
-   * Fix for Error in file App.tsx on line 120 & 126: Property 'addLeaveRequest' does not exist
-   */
   const addLeaveRequest = async (req: Omit<LeaveRequest, 'id' | 'timestamp' | 'status'>) => {
     const { error } = await supabase.from('leave_requests').insert([{
       user_id: req.userId,
@@ -182,9 +167,6 @@ export const useStaffData = () => {
     await fetchStaffData();
   };
 
-  /**
-   * Fix for Error in file App.tsx on line 126: Property 'updateLeaveMeta' does not exist
-   */
   const updateLeaveMeta = async (id: string, updates: { isArchived?: boolean, isDeleted?: boolean }) => {
     const dbUpdates: any = {};
     if (updates.isArchived !== undefined) dbUpdates.is_archived = updates.isArchived;
@@ -194,18 +176,12 @@ export const useStaffData = () => {
     await fetchStaffData();
   };
 
-  /**
-   * Fix for Error in file App.tsx on line 126: Property 'deleteLeaveRequestPermanent' does not exist
-   */
   const deleteLeaveRequestPermanent = async (id: string) => {
     const { error } = await supabase.from('leave_requests').delete().eq('id', id);
     if (error) throw error;
     await fetchStaffData();
   };
 
-  /**
-   * Fix for Error in file App.tsx on line 126: Property 'clearUserLeaves' does not exist
-   */
   const clearUserLeaves = async (userId: string) => {
     const { error } = await supabase.from('leave_requests').update({ is_deleted: true }).eq('user_id', userId);
     if (error) throw error;
@@ -227,19 +203,24 @@ export const useStaffData = () => {
   };
 
   const addBranch = async (payload: { name: string, location?: string, phone?: string, taxNumber?: string, commercialRegister?: string }) => {
-    const opNumber = 'BR-' + Math.floor(100 + Math.random() * 899).toString();
-    const { error } = await supabase.from('branches').insert([{
-      name: payload.name,
-      location: payload.location,
-      phone: payload.phone,
-      tax_number: payload.taxNumber,
-      commercial_register: payload.commercialRegister,
+    const opNumber = 'BR-' + Math.floor(1000 + Math.random() * 8999).toString();
+    const { data, error } = await supabase.from('branches').insert([{
+      name: payload.name.trim(),
+      location: payload.location?.trim(),
+      phone: payload.phone?.trim(),
+      tax_number: payload.taxNumber?.trim(),
+      commercial_register: payload.commercialRegister?.trim(),
       operational_number: opNumber,
       status: 'active',
       is_deleted: false
-    }]);
-    if (error) throw error;
+    }]).select().single();
+    
+    if (error) {
+      console.error("Supabase Branch Insert Error:", error);
+      throw error;
+    }
     await fetchStaffData();
+    return data;
   };
 
   return { 

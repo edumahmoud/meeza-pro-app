@@ -25,7 +25,7 @@ import { useInventory } from './hooks/useInventory';
 import { useSalesData } from './hooks/useSalesData';
 import { usePurchaseData } from './hooks/usePurchaseData';
 import { useStaffData } from './hooks/useStaffData';
-import { useSystemSettings } from './hooks/useSystemSettings';
+import { useSystemSettings } from './hooks/useSystemSettings'; // تم التوحيد هنا
 import { useReturnData } from './hooks/useReturnData';
 import { useArchiveData } from './hooks/useArchiveData';
 import { useActivityLogs } from './hooks/useActivityLogs';
@@ -74,6 +74,12 @@ const App: React.FC = () => {
     const saved = localStorage.getItem('meeza_pos_user');
     if (saved) setUser(JSON.parse(saved));
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem('meeza_pos_user', JSON.stringify(user));
+    }
+  }, [user]);
 
   useEffect(() => {
     if (!inventory.loading && !sys.loading) setHasInitialLoaded(true);

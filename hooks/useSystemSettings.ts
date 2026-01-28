@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { SystemSettings, PermissionOverride, User, ProceduralAction } from '../types';
 import { supabase } from '../supabaseClient';
@@ -74,7 +75,7 @@ export const useSystemSettings = () => {
 
   useEffect(() => {
     fetchSettings();
-    const systemChannel = supabase.channel('system-settings-channel')
+    const systemChannel = supabase.channel('system-settings-global')
       .on('postgres_changes', { event: '*', table: 'system_settings' }, () => fetchSettings())
       .on('postgres_changes', { event: '*', table: 'permission_overrides' }, () => fetchSettings())
       .on('postgres_changes', { event: '*', table: 'app_roles' }, () => fetchSettings())
@@ -102,15 +103,12 @@ export const useSystemSettings = () => {
 
   const addRole = async (key: string, name: string) => {
     const cleanKey = key.toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
-    if (!cleanKey) throw new Error("كود الوظيفة غير صالح");
-
     const { error } = await supabase.from('app_roles').insert([{ 
       role_key: cleanKey, 
       role_name: name.trim(), 
       seniority: 0, 
       is_system: false 
     }]);
-    
     if (error) throw error;
     await fetchSettings();
   };
@@ -124,18 +122,18 @@ export const useSystemSettings = () => {
   };
 
   const checkPermission = useCallback((user: { role: string, username: string }, action: ProceduralAction): boolean => {
-    const userLower = (user.username || '').toLowerCase().trim();
-    if (userLower === 'admin') return true;
-    if (settings.globalSystemLock) return false;
+    // تم إلغاء التجاوز التلقائي لـ admin لضمان الرقابة حتى على المدير
+    if (settings.globalSystemLock && user.username !== 'admin') return false;
     
     const roleLower = (user.role || '').toLowerCase().trim();
     
+    // فحص المصفوفة السحابية أولاً
     if (settings.roleHiddenActions?.[roleLower]?.includes(action)) return false;
     if (settings.roleHiddenSections?.[roleLower]?.includes(action as any)) return false;
-
     if (settings.userHiddenActions?.[user.username]?.includes(action)) return false;
     if (settings.userHiddenSections?.[user.username]?.includes(action as any)) return false;
 
+    // فحص الاستثناءات الفردية
     const userOverride = overrides.find(o => o.targetType === 'user' && o.targetId === user.username && o.action === action);
     if (userOverride) return userOverride.isAllowed;
     

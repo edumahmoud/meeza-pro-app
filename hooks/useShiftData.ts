@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { Shift, User } from '../types';
 import { supabase } from '../supabaseClient';
@@ -45,7 +46,8 @@ export const useShiftData = (user: User | null) => {
         user_id: user.id,
         branch_id: user.branchId,
         opening_balance: balance,
-        status: 'open'
+        status: 'open',
+        start_timestamp: new Date().toISOString()
       }])
       .select()
       .single();
@@ -58,15 +60,33 @@ export const useShiftData = (user: User | null) => {
   const closeShift = async (actualBalance: number, notes: string) => {
     if (!activeShift) return;
     
-    // حساب الرصيد المتوقع (افتتاحي + مبيعات الوردية - مرتجعات الوردية)
-    const { data: salesSum } = await supabase
+    // 1. حساب إجمالي المبيعات
+    const { data: salesData } = await supabase
       .from('sales_invoices')
       .select('net_total')
       .eq('shift_id', activeShift.id)
       .eq('is_deleted', false);
     
-    const totalSales = (salesSum || []).reduce((a, b) => a + Number(b.net_total), 0);
-    const expected = activeShift.openingBalance + totalSales;
+    // 2. حساب إجمالي المرتجعات (بناءً على التوقيت لأنها قد لا ترتبط بـ shift_id مباشرة)
+    const { data: returnsData } = await supabase
+      .from('returns')
+      .select('total_refund')
+      .eq('branch_id', activeShift.branchId)
+      .gte('timestamp', new Date(activeShift.startTimestamp).getTime());
+
+    // 3. حساب المصاريف المسحوبة خلال الوردية
+    const { data: expensesData } = await supabase
+      .from('expenses')
+      .select('amount')
+      .eq('branch_id', activeShift.branchId)
+      .gte('timestamp', new Date(activeShift.startTimestamp).getTime());
+    
+    const totalSales = (salesData || []).reduce((a, b) => a + Number(b.net_total), 0);
+    const totalReturns = (returnsData || []).reduce((a, b) => a + Number(b.total_refund), 0);
+    const totalExpenses = (expensesData || []).reduce((a, b) => a + Number(b.amount), 0);
+
+    // المعادلة المالية الصحيحة: (افتتاحي + مبيعات) - (مرتجعات + مصاريف)
+    const expected = (activeShift.openingBalance + totalSales) - (totalReturns + totalExpenses);
     const diff = actualBalance - expected;
 
     const { error } = await supabase

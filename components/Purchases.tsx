@@ -242,7 +242,7 @@ const Purchases = ({
                          onFocus={()=>setShowItemResults(true)}
                        />
                        {showItemResults && (
-                        <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border z-[100] overflow-hidden divide-y divide-slate-50 animate-in fade-in slide-in-from-top-2">
+                        <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border z-[100] overflow-hidden divide-y divide-slate-100 animate-in fade-in slide-in-from-top-2">
                            {filteredItems.map(p => (
                              <button key={p.id} onClick={()=>{setPendingItem({...pendingItem, product:p, costPrice:p.wholesalePrice, retailPrice:p.retailPrice}); setShowItemResults(false); setItemSearch(p.name);}} className="w-full p-4 text-right hover:bg-indigo-50 flex justify-between items-center transition-colors group">
                                 <div className="flex items-center gap-3">
@@ -255,7 +255,6 @@ const Purchases = ({
                              </button>
                            ))}
                            
-                           {/* Integrated Action Row - Merged into Smart Search Results */}
                            <button 
                              onClick={()=>{setQuickProduct({...quickProduct, name: itemSearch}); setIsQuickAddOpen(true);}} 
                              className={`w-full p-5 text-right transition-all flex items-center gap-4 border-t-4 border-indigo-50 ${itemSearch.trim().length > 0 ? 'bg-indigo-600 text-white hover:bg-slate-900' : 'bg-slate-50 text-slate-300 pointer-events-none'}`}

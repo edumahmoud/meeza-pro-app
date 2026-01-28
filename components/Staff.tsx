@@ -1,14 +1,16 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Users, Building2, UserPlus, Trash2, Key, Plus, Search, X, 
   TrendingUp, Wallet, MapPin, ArrowRight, UserCheck, Ban, 
   ShoppingCart, Copy, DownloadCloud, History, Save, 
   ArrowDownRight, Receipt, BadgeCheck, Lock, ShieldCheck, 
-  Building, Phone, Landmark, FileText, PhoneCall, Info, UserCog, Award, ArrowRightLeft, Power
+  Building, Phone, Landmark, FileText, PhoneCall, Info, UserCog, Award, ArrowRightLeft, Power, RefreshCw
 } from 'lucide-react';
 import { User as UserType, Branch, StaffPayment, LeaveRequest, Invoice, SystemSettings, UserRole, StaffPaymentType, ProceduralAction, Product, Expense, ReturnRecord } from '../types';
 import { AppRole } from '../hooks/useSystemSettings';
 import { copyToClipboard } from './Layout';
+import { BranchCard } from './Branches';
 
 interface StaffProps {
   currentUser: UserType;
@@ -55,7 +57,7 @@ const Staff = ({
   const [selectedBranchId, setSelectedBranchId] = useState(null as string | null);
   
   const [statPeriod, setStatPeriod] = useState('month' as 'day' | 'month' | 'year');
-  const [branchStatPeriod, setBranchStatPeriod] = useState('month' as 'day' | 'month' | 'year');
+  const [isSaving, setIsSaving] = useState(false);
 
   const isAdmin = useMemo(() => ['admin', 'it_support', 'general_manager'].includes(currentUser.role), [currentUser.role]);
 
@@ -100,6 +102,79 @@ const Staff = ({
       } catch (e) { onShowToast("فشل تحديث الحالة", "error"); }
     }, newStatus === 'active' ? 'info' : 'warning');
   };
+
+  const handleBranchSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (isSaving) return;
+    
+    const f = new FormData(e.currentTarget);
+    const name = f.get('name') as string;
+    
+    if (!name || name.trim().length < 2) {
+      onShowToast("يرجى إدخل اسم فرع صحيح", "error");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await onAddBranch({
+        name,
+        location: f.get('location') as string,
+        phone: f.get('phone') as string,
+        taxNumber: f.get('tax') as string,
+        commercialRegister: f.get('comm') as string
+      });
+      onShowToast("تم تأسيس الفرع بنجاح بنظام السحابة", "success");
+      setViewMode('list'); 
+      setActiveTab('branches');
+    } catch (err: any) { 
+      console.error(err);
+      onShowToast("فشل في تأسيس الفرع - تحقق من الاتصال وقيمة الحقول", "error"); 
+    } finally { 
+      setIsSaving(false); 
+    }
+  };
+
+  // عرض تفاصيل الفرع المختارة
+  if (viewMode === 'branch_detail' && selectedBranchId) {
+    const branch = branches.find(b => b.id === selectedBranchId);
+    if (branch) {
+      return (
+        <div className="max-w-7xl mx-auto space-y-8 animate-in font-['Cairo'] pb-12 select-text" dir="rtl">
+           <div className="flex items-center gap-4 mb-4">
+              <button 
+                onClick={() => { setViewMode('list'); setSelectedBranchId(null); }} 
+                className="p-4 bg-white border border-slate-200 rounded-2xl hover:bg-slate-900 group transition-all shadow-sm active:scale-95"
+              >
+                 <ArrowRight size={24} className="group-hover:text-white"/>
+              </button>
+              <div>
+                 <h2 className="text-xl font-black text-slate-800">بيانات الفرع التفصيلية</h2>
+                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">العودة لقائمة الفروع</p>
+              </div>
+           </div>
+
+           <BranchCard 
+              b={branch}
+              users={users}
+              invoices={invoices}
+              products={products}
+              isHQAdmin={isAdmin}
+              onUpdateBranch={onUpdateBranch}
+              onDeleteBranch={onDeleteBranch}
+              onShowToast={onShowToast}
+              onViewUsers={(branchId) => {
+                 setSearchTerm('');
+                 setActiveTab('users');
+                 setViewMode('list');
+                 setSelectedBranchId(null);
+                 // ملاحظة: يمكن إضافة فلترة هنا في المستقبل لعرض موظفي هذا الفرع فقط
+              }}
+           />
+        </div>
+      );
+    }
+  }
 
   if (selectedStaffProfile) {
     const uInvoices = invoices.filter(i => i.createdBy === selectedStaffProfile.id && !i.isDeleted);
@@ -366,31 +441,24 @@ const Staff = ({
                  <div className="flex items-center gap-4"><div className="p-3 bg-indigo-600 rounded-2xl shadow-lg"><Building2 size={24}/></div><h3 className="font-black text-sm">تأسيس فرع جديد</h3></div>
                  <button onClick={() => setViewMode('list')}><X size={24}/></button>
               </div>
-              <form onSubmit={async (e) => {
-                 e.preventDefault();
-                 const f = new FormData(e.currentTarget);
-                 try {
-                   await onAddBranch({
-                     name: f.get('name') as string,
-                     location: f.get('location') as string,
-                     phone: f.get('phone') as string,
-                     taxNumber: f.get('tax') as string,
-                     commercialRegister: f.get('comm') as string
-                   });
-                   onShowToast("تم تأسيس الفرع بنجاح", "success");
-                   setViewMode('list'); setActiveTab('branches');
-                 } catch (err) { onShowToast("فشل التأسيس", "error"); }
-              }} className="p-10 space-y-8 text-right">
+              <form onSubmit={handleBranchSubmit} className="p-10 space-y-8 text-right">
                  <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase">المسمى التجاري</label><input name="name" required type="text" className="w-full p-4 bg-slate-50 border focus:border-indigo-600 rounded-2xl font-black text-sm outline-none shadow-inner" /></div>
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase">الموقع</label><input name="location" required type="text" className="w-full p-4 bg-slate-50 border rounded-2xl font-bold text-xs shadow-inner" /></div>
-                    <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase">الهاتف</label><input name="phone" required type="text" className="w-full p-4 bg-slate-50 border rounded-2xl font-bold text-xs shadow-inner" /></div>
+                    <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase">الموقع</label><input name="location" type="text" className="w-full p-4 bg-slate-50 border rounded-2xl font-bold text-xs shadow-inner" /></div>
+                    <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase">الهاتف</label><input name="phone" type="text" className="w-full p-4 bg-slate-50 border rounded-2xl font-bold text-xs shadow-inner" /></div>
                  </div>
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase">السجل التجاري</label><input name="comm" type="text" className="w-full p-4 bg-slate-50 border rounded-2xl font-bold text-xs shadow-inner" /></div>
                     <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase">الرقم الضريبي</label><input name="tax" type="text" className="w-full p-4 bg-slate-50 border rounded-2xl font-bold text-xs shadow-inner" /></div>
                  </div>
-                 <button type="submit" className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black text-sm shadow-xl hover:bg-indigo-700 transition-all flex items-center justify-center gap-3">اعتماد بيانات الفرع</button>
+                 <button 
+                  type="submit" 
+                  disabled={isSaving}
+                  className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black text-sm shadow-xl hover:bg-indigo-700 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                 >
+                    {isSaving ? <RefreshCw className="animate-spin" size={20}/> : <Save size={20}/>}
+                    اعتماد بيانات الفرع
+                 </button>
               </form>
            </div>
         </div>
