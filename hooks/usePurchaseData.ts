@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { PurchaseRecord, Supplier, SupplierPayment, User, PurchaseReturnRecord } from '../types';
 import { supabase } from '../supabaseClient';
 
-const isUUID = (id: any) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+const isUUID = (id: any) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id) || /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 
 export const usePurchaseData = () => {
   const [suppliers, setSuppliers] = useState([] as Supplier[]);
@@ -48,7 +48,10 @@ export const usePurchaseData = () => {
 
       if (payRes.data) setPayments(payRes.data.map(p => ({ 
         id: p.id, supplierId: p.supplier_id, purchaseId: p.purchase_id,
-        amount: Number(p.amount), notes: p.notes, timestamp: p.timestamp, date: p.date, time: p.time
+        amount: Number(p.amount), notes: p.notes, timestamp: p.timestamp, 
+        date: p.date || new Date(p.timestamp).toLocaleDateString('ar-EG'), 
+        time: p.time || new Date(p.timestamp).toLocaleTimeString('ar-EG'),
+        branchId: p.branch_id, createdBy: p.created_by
       })));
 
       if (retRes.data) setPurchaseReturns(retRes.data.map(r => ({
@@ -98,7 +101,6 @@ export const usePurchaseData = () => {
       subtotal: Number(it.subtotal || 0)
     }));
 
-    // حل مشكلة PGRST203 عبر ضمان إرسال المعاملات كـ UUID صالح أو NULL حصراً
     const safeCreatedBy = isUUID(record.createdBy) ? record.createdBy : null;
     const safeBranchId = isUUID(record.branchId) ? record.branchId : null;
     const safeSupplierId = isUUID(record.supplierId) ? record.supplierId : null;
@@ -122,11 +124,33 @@ export const usePurchaseData = () => {
       p_notes: record.notes ? String(record.notes) : null
     });
 
-    if (error) {
-      console.error("Critical Purchase RPC Error:", error);
-      throw new Error(error.message || "فشل إتمام عملية التوريد الموحدة");
-    }
+    if (error) throw error;
     await fetchData();
+  };
+
+  const addSupplierPayment = async (sId: string, amt: number, pId: string | null, notes: string, user: User) => {
+    const safeSupplierId = isUUID(sId) ? sId : null;
+    const safePurchaseId = (pId && isUUID(pId)) ? pId : null;
+    const safeBranchId = isUUID(user.branchId) ? user.branchId : null;
+    const safeUserId = isUUID(user.id) ? user.id : null;
+
+    if (!safeSupplierId) throw new Error("معرف المورد غير صالح");
+    
+    const { error } = await supabase.rpc('process_supplier_payment_v2', {
+      p_supplier_id: safeSupplierId,
+      p_amount: Number(amt),
+      p_purchase_id: safePurchaseId,
+      p_notes: notes || null,
+      p_branch_id: safeBranchId,
+      p_created_by: safeUserId
+    });
+    
+    if (error) throw error;
+    await fetchData();
+  };
+
+  const quickSettlePurchase = async (pId: string, supplierId: string, amount: number, user: User) => {
+    await addSupplierPayment(supplierId, amount, pId, "تسوية سريعة للفاتورة", user);
   };
 
   const addPurchaseReturn = async (record: PurchaseReturnRecord, user: User) => {
@@ -140,42 +164,26 @@ export const usePurchaseData = () => {
         refundAmount: Number(it.subtotal || 0)
     }));
 
+    const safeId = isUUID(record.id) ? record.id : crypto.randomUUID();
+    const safePurchaseId = isUUID(record.originalPurchaseId) ? record.originalPurchaseId : null;
+    const safeSupplierId = isUUID(record.supplierId) ? record.supplierId : null;
+    const safeUserId = isUUID(user.id) ? user.id : null;
+    const safeBranchId = isUUID(user.branchId) ? user.branchId : null;
+
     const { error } = await supabase.rpc('process_purchase_return_v2', {
-      p_id: record.id,
-      p_original_purchase_id: record.originalPurchaseId,
-      p_supplier_id: record.supplierId,
+      p_id: safeId,
+      p_original_purchase_id: safePurchaseId,
+      p_supplier_id: safeSupplierId,
       p_items: dbItems,
       p_total_refund: Number(record.totalRefund),
       p_refund_method: record.refundMethod,
       p_is_money_received: record.isMoneyReceived,
-      p_created_by: user.id,
-      p_branch_id: user.branchId || null,
+      p_created_by: safeUserId,
+      p_branch_id: safeBranchId,
       p_notes: record.notes || null
     });
 
-    if (error) {
-      console.error("Purchase Return RPC Error:", error);
-      throw new Error(error.message || "فشل تنفيذ مرتجع التوريد");
-    }
-
-    await fetchData();
-  };
-
-  const addSupplierPayment = async (sId: string, amt: number, pId: string | null, notes: string, user: User) => {
-    const { error } = await supabase.rpc('process_supplier_payment_v2', {
-      p_supplier_id: sId,
-      p_amount: Number(amt),
-      p_purchase_id: (pId && pId.trim() !== '') ? pId : null,
-      p_notes: notes || null,
-      p_branch_id: user.branchId || null,
-      p_created_by: user.id
-    });
-    
-    if (error) {
-      console.error("Supplier Payment RPC Error:", error);
-      throw new Error(error.message || "فشل عملية السداد الموحدة");
-    }
-
+    if (error) throw error;
     await fetchData();
   };
 
@@ -190,7 +198,7 @@ export const usePurchaseData = () => {
 
   return { 
     suppliers, purchases, payments, purchaseReturns, loading, 
-    addSupplier, deleteSupplier, addPurchase, addSupplierPayment, addPurchaseReturn, 
+    addSupplier, deleteSupplier, addPurchase, addSupplierPayment, addPurchaseReturn, quickSettlePurchase,
     refresh: fetchData 
   };
 };

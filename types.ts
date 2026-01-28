@@ -291,6 +291,8 @@ export interface SupplierPayment {
   timestamp: number;
   date?: string;
   time?: string;
+  branchId?: string;
+  createdBy?: string;
 }
 
 export interface StaffPayment {

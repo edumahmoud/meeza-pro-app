@@ -133,8 +133,6 @@ const App: React.FC = () => {
       case 'customers':
         return <Customers invoices={salesData.invoices} returns={returnData.returns} registeredCustomers={customers.customers} onAddCustomer={customers.addCustomer} onDeleteCustomer={customers.deleteCustomer} onShowToast={showToast} />;
       case 'purchases':
-        // Fix for Error in file App.tsx on line 138: Type '{ products: any; suppliers: any; purchases: any; branches: any; onAddPurchase: (record: PurchaseRecord) => Promise<void>; onShowToast: any; askConfirmation: any; user: any; }' is missing following properties from type 'PurchasesProps': onAddProduct, onAddPurchaseReturn
-        // Correcting the rendering to include missing required props from PurchasesProps.
         return (
           <Purchases 
             products={inventory.products} 
@@ -151,7 +149,22 @@ const App: React.FC = () => {
           />
         );
       case 'suppliers':
-        return <Suppliers suppliers={purchaseData.suppliers} purchases={purchaseData.purchases} payments={purchaseData.payments} onAddSupplier={purchaseData.addSupplier} onDeleteSupplier={purchaseData.deleteSupplier} onAddSupplierPayment={purchaseData.addSupplierPayment} onShowToast={showToast} askConfirmation={askConfirmation} user={user} />;
+        return (
+          <Suppliers 
+            suppliers={purchaseData.suppliers} 
+            purchases={purchaseData.purchases} 
+            payments={purchaseData.payments} 
+            purchaseReturns={purchaseData.purchaseReturns}
+            onAddSupplier={purchaseData.addSupplier} 
+            onDeleteSupplier={purchaseData.deleteSupplier} 
+            onAddSupplierPayment={purchaseData.addSupplierPayment} 
+            onShowToast={showToast} 
+            askConfirmation={askConfirmation} 
+            user={user} 
+            checkPermission={sys.checkPermission} 
+            quickSettlePurchase={purchaseData.quickSettlePurchase} 
+          />
+        );
       default:
         return <Dashboard invoices={salesData.invoices} returns={returnData.returns} expenses={salesData.expenses} products={inventory.products} staffPayments={staffData.staffPayments} user={user} summaryStats={salesData.summaryStats} suppliers={purchaseData.suppliers} />;
     }
