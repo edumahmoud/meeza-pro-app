@@ -59,7 +59,6 @@ const Staff = ({
 
   const isAdmin = useMemo(() => ['admin', 'it_support', 'general_manager'].includes(currentUser.role), [currentUser.role]);
 
-  // تحديث بيانات الموظف المختار لحظياً عند حدوث أي تغيير في القائمة الكلية
   useEffect(() => {
     if (selectedStaffProfile) {
       const updated = users.find(u => u.id === selectedStaffProfile.id);
@@ -69,7 +68,6 @@ const Staff = ({
     }
   }, [users]);
 
-  // حساب إحصائيات المبيعات لكل مستخدم
   const userStatsMap = useMemo(() => {
     const map: Record<string, { count: number, total: number }> = {};
     users.forEach(u => map[u.id] = { count: 0, total: 0 });
@@ -85,7 +83,6 @@ const Staff = ({
   const handleResetPass = async (userId: string) => {
     try {
       const newPass = await onResetPassword(userId);
-      // التحديث اللحظي داخل بطاقة البيانات دون مودال
       if (selectedStaffProfile && selectedStaffProfile.id === userId) {
         setSelectedStaffProfile({ ...selectedStaffProfile, password: newPass, isPasswordChanged: false });
       }
@@ -93,40 +90,17 @@ const Staff = ({
     } catch (e) { onShowToast("فشل تصفير كلمة السر", "error"); }
   };
 
-  const handleTransfer = async (userId: string, targetId: string) => {
-    try {
-      await onTransferEmployee(userId, targetId || null);
-      onShowToast("تم نقل الموظف بنجاح", "success");
-    } catch (e) { onShowToast("فشل عملية النقل", "error"); }
-  };
-
-  const handlePromotion = async (userId: string, newRole: UserRole) => {
-    try {
-      await onUpdateUserRole(userId, newRole);
-      onShowToast("تم تغيير الرتبة الوظيفية بنجاح", "success");
-    } catch (e) { onShowToast("فشل تغيير الرتبة", "error"); }
-  };
-
   const handleToggleBranchStatus = async (branch: Branch) => {
     const newStatus = branch.status === 'active' ? 'closed_temp' : 'active';
     const actionName = newStatus === 'active' ? 'تنشيط' : 'إيقاف نشاط';
-    
-    askConfirmation(
-      `${actionName} الفرع`,
-      `هل أنت متأكد من ${actionName} فرع ${branch.name}؟`,
-      async () => {
-        try {
-          await onUpdateBranch(branch.id, { status: newStatus });
-          onShowToast(`تم ${actionName} الفرع بنجاح`, "success");
-        } catch (e) {
-          onShowToast("فشل تحديث حالة الفرع", "error");
-        }
-      },
-      newStatus === 'active' ? 'info' : 'warning'
-    );
+    askConfirmation(`${actionName} الفرع`, `هل تود ${actionName} فرع ${branch.name}؟`, async () => {
+      try {
+        await onUpdateBranch(branch.id, { status: newStatus });
+        onShowToast(`تم ${actionName} الفرع بنجاح`, "success");
+      } catch (e) { onShowToast("فشل تحديث الحالة", "error"); }
+    }, newStatus === 'active' ? 'info' : 'warning');
   };
 
-  // 1. واجهة ملف الموظف (Profile)
   if (selectedStaffProfile) {
     const uInvoices = invoices.filter(i => i.createdBy === selectedStaffProfile.id && !i.isDeleted);
     const personalStats = (() => {
@@ -147,9 +121,9 @@ const Staff = ({
            <div className="flex items-center gap-6">
               <button onClick={() => setSelectedStaffProfile(null)} className="p-4 bg-slate-100 rounded-2xl hover:bg-slate-900 group transition-all shadow-sm"><ArrowRight size={24} className="group-hover:text-white"/></button>
               <div className="flex items-center gap-4">
-                 <div className="w-20 h-20 bg-indigo-600 rounded-[2rem] flex items-center justify-center text-white text-4xl font-black shadow-xl">{(selectedStaffProfile.fullName || '?')[0]}</div>
+                 <div className="w-20 h-20 bg-indigo-600 rounded-[2rem] flex items-center justify-center text-white text-4xl font-black shadow-xl">{(selectedStaffProfile.fullName || 'U')[0]}</div>
                  <div>
-                    <h2 className="text-2xl font-black text-slate-800">{selectedStaffProfile.fullName || '---'}</h2>
+                    <h2 className="text-2xl font-black text-slate-800">{selectedStaffProfile.fullName}</h2>
                     <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">{roles.find(r=>r.role_key===selectedStaffProfile.role)?.role_name || selectedStaffProfile.role}</p>
                  </div>
               </div>
@@ -193,7 +167,7 @@ const Staff = ({
                     <select 
                       className="w-full p-4 bg-slate-50 border rounded-2xl font-black text-xs outline-none focus:ring-4 focus:ring-indigo-600/5 cursor-pointer"
                       value={selectedStaffProfile.role}
-                      onChange={(e) => handlePromotion(selectedStaffProfile.id, e.target.value)}
+                      onChange={(e) => onUpdateUserRole(selectedStaffProfile.id, e.target.value)}
                     >
                        {roles.map(r => <option key={r.id} value={r.role_key}>{r.role_name}</option>)}
                     </select>
@@ -203,14 +177,13 @@ const Staff = ({
                     <select 
                       className="w-full p-4 bg-slate-50 border rounded-2xl font-black text-xs outline-none focus:ring-4 focus:ring-indigo-600/5 cursor-pointer"
                       value={selectedStaffProfile.branchId || ''}
-                      onChange={(e) => handleTransfer(selectedStaffProfile.id, e.target.value)}
+                      onChange={(e) => onTransferEmployee(selectedStaffProfile.id, e.target.value)}
                     >
                        <option value="">مقر الإدارة الرئيسي</option>
                        {branches.filter(b=>!b.isDeleted).map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                     </select>
                  </div>
                  
-                 {/* بطاقة بيانات الدخول - التحديث اللحظي */}
                  <div className="p-6 bg-slate-900 rounded-[2rem] space-y-3 shadow-2xl relative overflow-hidden mt-6">
                     <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
                        <Key size={150} className="text-white absolute -bottom-10 -right-10 rotate-12" />
@@ -235,9 +208,6 @@ const Staff = ({
                           </div>
                        </div>
                     </div>
-                    {!selectedStaffProfile.isPasswordChanged && (
-                       <p className="text-[8px] text-amber-400 italic flex items-center gap-1 relative z-10 animate-pulse"><Lock size={10}/> تنبيه: هذه كلمة سر مؤقتة، يرجى حث الموظف على التغيير فوراً.</p>
-                    )}
                  </div>
               </div>
            </div>
@@ -259,111 +229,6 @@ const Staff = ({
     );
   }
 
-  // 2. واجهة تفاصيل الفرع (Branch Detail)
-  if (viewMode === 'branch_detail' && selectedBranchId) {
-    const branch = branches.find(b => b.id === selectedBranchId);
-    const branchStaff = users.filter(u => u.branchId === selectedBranchId && !u.isDeleted);
-    const branchSales = invoices.filter(i => i.branchId === selectedBranchId && !i.isDeleted);
-    
-    // حساب الأداء المالي للفرع بناءً على تقسيم المدد
-    const branchStats = (() => {
-       const now = new Date();
-       const filtered = branchSales.filter(i => {
-          const d = new Date(i.timestamp);
-          if (branchStatPeriod === 'month') return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-          if (branchStatPeriod === 'year') return d.getFullYear() === now.getFullYear();
-          return i.date === now.toLocaleDateString('ar-EG');
-       });
-       return { total: filtered.reduce((a, b) => a + b.netTotal, 0), count: filtered.length };
-    })();
-
-    return (
-      <div className="max-w-6xl mx-auto space-y-8 animate-in font-['Cairo'] pb-12 select-text" dir="rtl">
-        <div className="flex flex-col md:flex-row items-center justify-between bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-sm gap-6">
-           <div className="flex items-center gap-6">
-              <button onClick={() => {setViewMode('list'); setSelectedBranchId(null);}} className="p-4 bg-slate-100 rounded-2xl hover:bg-slate-900 group transition-all shadow-sm"><ArrowRight size={24} className="group-hover:text-white"/></button>
-              <div className="flex items-center gap-4">
-                 <div className="w-20 h-20 bg-slate-900 text-white rounded-[2rem] flex items-center justify-center shadow-xl"><Building size={32}/></div>
-                 <div>
-                    <h2 className="text-2xl font-black text-slate-800">{branch?.name}</h2>
-                    <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">كود تشغيلي: {branch?.operationalNumber}</p>
-                 </div>
-              </div>
-           </div>
-           <div className="flex flex-wrap gap-2">
-              {branch && (
-                <button 
-                  onClick={() => handleToggleBranchStatus(branch)} 
-                  className={`px-5 py-3 rounded-xl font-black text-[10px] flex items-center gap-2 shadow-sm transition-all ${branch.status === 'active' ? 'bg-amber-50 text-amber-600 hover:bg-amber-100' : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'}`}
-                >
-                  <Power size={16}/> {branch.status === 'active' ? 'إيقاف النشاط مؤقتاً' : 'تنشيط الفرع الآن'}
-                </button>
-              )}
-              <button onClick={()=>onShowToast("جاري تصدير بيانات الفرع...", "success")} className="px-5 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-black text-[10px] flex items-center gap-2"><DownloadCloud size={16}/> تقرير الفرع</button>
-              <button onClick={()=>askConfirmation("حذف الفرع", "سيتم حذف كافة سجلات الفرع نهائياً.", () => onDeleteBranch(branch!.id, "حذف إداري"), 'danger')} className="px-5 py-3 bg-rose-50 text-rose-600 rounded-xl font-black text-[10px] flex items-center gap-2"><Trash2 size={16}/> حذف الفرع</button>
-           </div>
-        </div>
-
-        {/* أداء الفرع المالي والتشغيلي مقسم المدد */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-           <div className="bg-emerald-600 p-8 rounded-[2.5rem] text-white shadow-xl relative overflow-hidden">
-              <TrendingUp size={80} className="absolute -bottom-4 -left-4 text-white/10 rotate-12"/>
-              <p className="text-[10px] font-black opacity-60 uppercase mb-1">مبيعات فترة الفرع</p>
-              <h3 className="text-3xl font-black">{branchStats.total.toLocaleString()} <span className="text-sm opacity-40">ج.م</span></h3>
-              <div className="mt-4 flex gap-2 relative z-10">
-                 {['day', 'month', 'year'].map(p => (
-                    <button key={p} onClick={()=>setBranchStatPeriod(p as any)} className={`px-3 py-1 rounded-lg text-[8px] font-black transition-all ${branchStatPeriod === p ? 'bg-white text-emerald-600' : 'bg-white/10 text-white/60'}`}>
-                       {p === 'day' ? 'اليوم' : p === 'month' ? 'الشهر' : 'السنة'}
-                    </button>
-                 ))}
-              </div>
-           </div>
-           <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm text-center flex flex-col justify-center">
-              <p className="text-[10px] font-black text-slate-400 uppercase mb-1">فواتير الفترة</p>
-              <h3 className="text-3xl font-black text-slate-800">{branchStats.count}</h3>
-           </div>
-           <div className="bg-indigo-600 p-8 rounded-[2.5rem] text-white shadow-xl text-center flex flex-col justify-center">
-              <p className="text-[10px] font-black text-indigo-300 uppercase mb-1">إجمالي الطاقم</p>
-              <h3 className="text-3xl font-black text-white">{branchStaff.length} <span className="text-sm opacity-40">موظف</span></h3>
-           </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-           <div className="lg:col-span-1 bg-slate-900 p-8 rounded-[3rem] text-white space-y-6 shadow-xl relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-full opacity-5 pointer-events-none">
-                 <Building2 size={300} className="absolute -bottom-20 -right-20" />
-              </div>
-              <h4 className="font-black text-sm flex items-center gap-2 border-b border-white/10 pb-4 relative z-10"><Info size={18} className="text-indigo-400"/> البيانات القانونية</h4>
-              <div className="space-y-4 text-xs font-bold relative z-10">
-                 <div className="flex justify-between p-2 border-b border-white/5"><span>الموقع الجغرافي:</span><span className="text-indigo-200">{branch?.location || '---'}</span></div>
-                 <div className="flex justify-between p-2 border-b border-white/5"><span>هاتف التواصل:</span><span>{branch?.phone || '---'}</span></div>
-                 <div className="flex justify-between p-2 border-b border-white/5"><span>السجل التجاري:</span><span>{branch?.commercialRegister || '---'}</span></div>
-                 <div className="flex justify-between p-2 border-b border-white/5"><span>الرقم الضريبي:</span><span>{branch?.taxNumber || '---'}</span></div>
-                 <div className="flex justify-between p-2"><span>تاريخ الافتتاح:</span><span>{new Date(branch?.createdAt || 0).toLocaleDateString('ar-EG')}</span></div>
-              </div>
-           </div>
-
-           <div className="lg:col-span-2 bg-white rounded-[3rem] border border-slate-100 shadow-sm overflow-hidden flex flex-col h-[450px]">
-              <div className="p-6 border-b bg-slate-50/50 flex items-center gap-3"><Users size={18} className="text-indigo-600"/><h4 className="font-black text-sm text-slate-800">طاقم عمل الفرع الحالي</h4></div>
-              <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-hide">
-                 {branchStaff.map(u => (
-                    <div key={u.id} onClick={() => setSelectedStaffProfile(u)} className="flex justify-between items-center p-5 bg-slate-50 rounded-2xl hover:bg-indigo-50 transition-all cursor-pointer group">
-                       <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center font-black text-indigo-600 shadow-sm group-hover:bg-indigo-600 group-hover:text-white transition-all">{(u.fullName || '?')[0]}</div>
-                          <div><p className="text-xs font-black text-slate-800">{u.fullName}</p><p className="text-[9px] text-slate-400 uppercase tracking-widest">{roles.find(r=>r.role_key===u.role)?.role_name || u.role}</p></div>
-                       </div>
-                       <ArrowDownRight size={16} className="text-indigo-600 opacity-0 group-hover:opacity-100 transition-all"/>
-                    </div>
-                 ))}
-                 {branchStaff.length === 0 && <p className="text-center py-20 text-slate-300 italic text-xs font-bold uppercase tracking-widest">لا يوجد موظفين معينين لهذا الفرع</p>}
-              </div>
-           </div>
-        </div>
-      </div>
-    );
-  }
-
-  // 3. القائمة الرئيسية
   return (
     <div className="space-y-8 animate-in font-['Cairo'] pb-12 select-text" dir="rtl">
       <div className="bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-sm flex flex-col lg:flex-row justify-between items-center gap-6">
@@ -401,7 +266,7 @@ const Staff = ({
               return (
                 <div key={u.id} className="bg-white p-8 rounded-[3rem] border border-slate-100 shadow-sm hover:border-indigo-600 transition-all group cursor-pointer relative overflow-hidden flex flex-col h-full" onClick={()=>setSelectedStaffProfile(u)}>
                    <div className="flex justify-between items-start mb-6">
-                      <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-[1.5rem] flex items-center justify-center font-black text-2xl shadow-inner group-hover:bg-indigo-600 group-hover:text-white transition-all">{(u.fullName || '?')[0]}</div>
+                      <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-[1.5rem] flex items-center justify-center font-black text-2xl shadow-inner group-hover:bg-indigo-600 group-hover:text-white transition-all">{(u.fullName || 'U')[0]}</div>
                       <div className="flex gap-2">
                          <button onClick={(e) => { e.stopPropagation(); handleResetPass(u.id); }} className="p-3 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-2xl transition-all shadow-sm bg-white border border-slate-100" title="تصفير الباسوورد"><Key size={18}/></button>
                       </div>
@@ -420,10 +285,6 @@ const Staff = ({
                          <p className="text-xs font-black text-emerald-600">{stats.total.toLocaleString()}</p>
                       </div>
                    </div>
-                   <div className="mt-4 pt-4 border-t border-dashed border-slate-100 flex justify-between items-center">
-                      <div className="flex items-center gap-2 text-slate-400"><Building size={12}/> <span className="text-[9px] font-bold">{branches.find(b=>b.id===u.branchId)?.name || 'المركز الرئيسي'}</span></div>
-                      <ArrowDownRight size={16} className="text-indigo-600 opacity-0 group-hover:opacity-100 transition-all"/>
-                   </div>
                 </div>
               );
            })}
@@ -439,46 +300,27 @@ const Staff = ({
                     <div className="flex gap-2">
                        {isAdmin && (
                          <>
-                           <button 
-                             onClick={(e) => { e.stopPropagation(); handleToggleBranchStatus(b); }} 
-                             className={`p-3 rounded-2xl transition-all shadow-sm bg-white border border-slate-100 ${b.status === 'active' ? 'text-amber-500 hover:bg-amber-50' : 'text-emerald-500 hover:bg-emerald-50'}`}
-                             title={b.status === 'active' ? 'إيقاف النشاط' : 'تنشيط'}
-                           >
-                             <Power size={18}/>
-                           </button>
+                           <button onClick={(e) => { e.stopPropagation(); handleToggleBranchStatus(b); }} className={`p-3 rounded-2xl transition-all shadow-sm bg-white border border-slate-100 ${b.status === 'active' ? 'text-amber-500 hover:bg-amber-50' : 'text-emerald-500 hover:bg-emerald-50'}`} title={b.status === 'active' ? 'إيقاف النشاط' : 'تنشيط'}><Power size={18}/></button>
                            <button onClick={(e)=>{e.stopPropagation(); askConfirmation("حذف الفرع", `هل تود حذف فرع ${b.name} نهائياً؟`, () => onDeleteBranch(b.id, "حذف إداري"), 'danger');}} className="p-3 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-2xl transition-all shadow-sm bg-white border border-slate-100"><Trash2 size={18}/></button>
                          </>
                        )}
-                       <span className={`px-4 py-1.5 rounded-xl text-[8px] font-black uppercase shadow-sm border ${b.status === 'active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100'}`}>{b.status === 'active' ? 'نشط' : 'مغلق'}</span>
                     </div>
                  </div>
-                 <div className="flex-1">
-                    <h3 className="text-2xl font-black text-slate-800 mb-2">{b.name}</h3>
-                    <div className="flex items-center gap-2 mb-6">
-                       <div className="p-2 bg-slate-100 rounded-lg text-slate-400 group-hover:text-indigo-600 transition-colors"><MapPin size={14}/></div>
-                       <p className="text-[11px] text-slate-500 font-bold leading-tight">{b.location || 'لم يتم تحديد موقع'}</p>
-                    </div>
-                 </div>
-                 <div className="pt-6 border-t border-slate-100 flex justify-between items-center">
-                    <div className="flex items-center gap-3">
-                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">{users.filter(u=>u.branchId===b.id && !u.isDeleted).length} موظف حالي</p>
-                    </div>
-                    <ArrowDownRight size={20} className="text-indigo-600 opacity-0 group-hover:opacity-100 -translate-x-4 group-hover:translate-x-0 transition-all"/>
+                 <h3 className="text-2xl font-black text-slate-800 mb-2">{b.name}</h3>
+                 <div className="flex items-center gap-2 mb-6">
+                    <MapPin size={14} className="text-slate-400"/>
+                    <p className="text-[11px] text-slate-500 font-bold">{b.location || 'لم يتم تحديد موقع'}</p>
                  </div>
               </div>
            ))}
         </div>
       )}
 
-      {/* Add User Modal */}
       {viewMode === 'add_user' && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[5000] flex items-center justify-center p-4">
            <div className="bg-white rounded-[3rem] w-full max-w-2xl shadow-2xl overflow-hidden animate-in zoom-in-95">
               <div className="p-6 bg-slate-900 text-white flex justify-between items-center">
-                 <div className="flex items-center gap-4">
-                    <div className="p-3 bg-indigo-600 rounded-2xl shadow-lg"><UserPlus size={24}/></div>
-                    <div><h3 className="font-black text-sm">تعيين موظف جديد</h3><p className="text-[9px] opacity-40 uppercase tracking-widest">New Staff Enrollment</p></div>
-                 </div>
+                 <div className="flex items-center gap-4"><div className="p-3 bg-indigo-600 rounded-2xl shadow-lg"><UserPlus size={24}/></div><h3 className="font-black text-sm">تعيين موظف جديد</h3></div>
                  <button onClick={() => setViewMode('list')}><X size={24}/></button>
               </div>
               <form onSubmit={async (e) => {
@@ -494,8 +336,8 @@ const Staff = ({
                      f.get('hasPerformance') === 'on',
                      f.get('birthDate') as string
                    );
-                   onShowToast("تم التعيين بنجاح، توجه لبطاقة الموظف لرؤية كلمة السر", "success");
-                   setSelectedStaffProfile({ ...res, password: res.temporaryPassword });
+                   onShowToast("تم التعيين بنجاح، الباسوورد متاح الآن في بطاقة الموظف", "success");
+                   setSelectedStaffProfile(res);
                    setViewMode('list');
                  } catch (err) { onShowToast("فشل التعيين", "error"); }
               }} className="p-8 space-y-6 text-right">
@@ -504,37 +346,24 @@ const Staff = ({
                     <div className="space-y-1.5"><label className="text-[10px] font-black text-slate-400 uppercase">رقم الهاتف</label><input name="phone" required type="text" className="w-full p-4 bg-slate-50 border rounded-2xl font-black text-sm outline-none focus:bg-white transition-all shadow-inner" /></div>
                  </div>
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-1.5"><label className="text-[10px] font-black text-slate-400 uppercase">الوظيفة المعتمدة</label>
-                      <select name="role" required className="w-full p-4 bg-slate-50 border rounded-2xl font-black text-sm outline-none cursor-pointer">
-                        {roles.map(r => <option key={r.role_key} value={r.role_key}>{r.role_name}</option>)}
-                      </select>
-                    </div>
-                    <div className="space-y-1.5"><label className="text-[10px] font-black text-slate-400 uppercase">الفرع المخصص</label>
-                      <select name="branchId" required className="w-full p-4 bg-slate-50 border rounded-2xl font-black text-sm outline-none cursor-pointer">
-                        <option value="">مقر الإدارة الرئيسي</option>
-                        {branches.filter(b=>!b.isDeleted).map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                      </select>
-                    </div>
+                    <div className="space-y-1.5"><label className="text-[10px] font-black text-slate-400 uppercase">الوظيفة</label><select name="role" required className="w-full p-4 bg-slate-50 border rounded-2xl font-black text-sm outline-none">{roles.map(r => <option key={r.id} value={r.role_key}>{r.role_name}</option>)}</select></div>
+                    <div className="space-y-1.5"><label className="text-[10px] font-black text-slate-400 uppercase">الفرع</label><select name="branchId" required className="w-full p-4 bg-slate-50 border rounded-2xl font-black text-sm outline-none"><option value="">مقر الإدارة</option>{branches.filter(b=>!b.isDeleted).map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select></div>
                  </div>
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-1.5"><label className="text-[10px] font-black text-slate-400 uppercase">الراتب الأساسي</label><input name="salary" required type="number" className="w-full p-4 bg-slate-50 border rounded-2xl font-black text-sm outline-none shadow-inner" /></div>
                     <div className="space-y-1.5"><label className="text-[10px] font-black text-slate-400 uppercase">تاريخ الميلاد</label><input name="birthDate" required type="date" className="w-full p-4 bg-slate-50 border rounded-2xl font-black text-sm outline-none shadow-inner" /></div>
                  </div>
-                 <button type="submit" className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black text-xs shadow-xl hover:bg-indigo-700 transition-all flex items-center justify-center gap-3"><Save size={18}/> اعتماد قرار التعيين وفتح الملف</button>
+                 <button type="submit" className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black text-xs shadow-xl hover:bg-indigo-700 transition-all">اعتماد قرار التعيين</button>
               </form>
            </div>
         </div>
       )}
 
-      {/* Add Branch Modal - تحديث الخانات المطلوبة */}
       {viewMode === 'add_branch' && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[5000] flex items-center justify-center p-4">
            <div className="bg-white rounded-[3rem] w-full max-w-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 border border-white/20">
               <div className="p-6 bg-slate-900 text-white flex justify-between items-center">
-                 <div className="flex items-center gap-4">
-                    <div className="p-3 bg-indigo-600 rounded-2xl shadow-lg"><Building2 size={24}/></div>
-                    <div><h3 className="font-black text-sm">تأسيس فرع تشغيلي جديد</h3><p className="text-[9px] opacity-40 uppercase tracking-widest">Branch Infrastructure Setup</p></div>
-                 </div>
+                 <div className="flex items-center gap-4"><div className="p-3 bg-indigo-600 rounded-2xl shadow-lg"><Building2 size={24}/></div><h3 className="font-black text-sm">تأسيس فرع جديد</h3></div>
                  <button onClick={() => setViewMode('list')}><X size={24}/></button>
               </div>
               <form onSubmit={async (e) => {
@@ -549,43 +378,19 @@ const Staff = ({
                      commercialRegister: f.get('comm') as string
                    });
                    onShowToast("تم تأسيس الفرع بنجاح", "success");
-                   setViewMode('list');
-                   setActiveTab('branches');
+                   setViewMode('list'); setActiveTab('branches');
                  } catch (err) { onShowToast("فشل التأسيس", "error"); }
               }} className="p-10 space-y-8 text-right">
-                 
-                 <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Landmark size={12}/> المسمى التجاري للفرع</label>
-                    <input name="name" required type="text" placeholder="مثال: فرع القاهرة - مدينة نصر" className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-2xl font-black text-sm outline-none transition-all shadow-inner" />
-                 </div>
-
+                 <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase">المسمى التجاري</label><input name="name" required type="text" className="w-full p-4 bg-slate-50 border focus:border-indigo-600 rounded-2xl font-black text-sm outline-none shadow-inner" /></div>
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><MapPin size={12}/> العنوان / الموقع</label>
-                       <input name="location" required type="text" placeholder="العنوان التفصيلي للفرع..." className="w-full p-4 bg-slate-50 border-none rounded-2xl font-bold text-xs outline-none shadow-inner" />
-                    </div>
-                    <div className="space-y-2">
-                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><PhoneCall size={12}/> هاتف التواصل</label>
-                       <input name="phone" required type="text" placeholder="رقم الهاتف الخاص بالفرع..." className="w-full p-4 bg-slate-50 border-none rounded-2xl font-bold text-xs outline-none shadow-inner" />
-                    </div>
+                    <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase">الموقع</label><input name="location" required type="text" className="w-full p-4 bg-slate-50 border rounded-2xl font-bold text-xs shadow-inner" /></div>
+                    <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase">الهاتف</label><input name="phone" required type="text" className="w-full p-4 bg-slate-50 border rounded-2xl font-bold text-xs shadow-inner" /></div>
                  </div>
-
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><FileText size={12}/> السجل التجاري</label>
-                       <input name="comm" type="text" placeholder="رقم السجل التجاري..." className="w-full p-4 bg-slate-50 border-none rounded-2xl font-bold text-xs outline-none shadow-inner" />
-                    </div>
-                    <div className="space-y-2">
-                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><ShieldCheck size={12}/> الرقم الضريبي</label>
-                       <input name="tax" type="text" placeholder="رقم البطاقة الضريبية..." className="w-full p-4 bg-slate-50 border-none rounded-2xl font-bold text-xs outline-none shadow-inner" />
-                    </div>
+                    <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase">السجل التجاري</label><input name="comm" type="text" className="w-full p-4 bg-slate-50 border rounded-2xl font-bold text-xs shadow-inner" /></div>
+                    <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase">الرقم الضريبي</label><input name="tax" type="text" className="w-full p-4 bg-slate-50 border rounded-2xl font-bold text-xs shadow-inner" /></div>
                  </div>
-
-                 <div className="pt-4">
-                    <button type="submit" className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black text-sm shadow-xl hover:bg-indigo-700 transition-all flex items-center justify-center gap-3 active:scale-95">
-                       <Save size={20}/> اعتماد بيانات الفرع وفتح السجل
-                    </button>
-                 </div>
+                 <button type="submit" className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black text-sm shadow-xl hover:bg-indigo-700 transition-all flex items-center justify-center gap-3">اعتماد بيانات الفرع</button>
               </form>
            </div>
         </div>
