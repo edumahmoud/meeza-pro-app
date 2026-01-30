@@ -169,7 +169,7 @@ export interface ActivityLog {
 
 export type ViewType = 
   | 'dashboard' | 'sales' | 'inventory' | 'returns' | 'expenses' | 'reports' | 'archive' 
-  | 'recycleBin' | 'customers' | 'purchases' | 'suppliers' | 'staff' | 'settings' | 'userProfile' | 'treasury' | 'itControl' | 'dailyLogs' | 'correspondence';
+  | 'recycleBin' | 'customers' | 'purchases' | 'suppliers' | 'staff' | 'settings' | 'userProfile' | 'treasury' | 'itControl' | 'dailyLogs' | 'correspondence' | 'securityAudit';
 
 export interface SystemSettings {
   appName: string;

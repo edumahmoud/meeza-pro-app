@@ -52,7 +52,10 @@ const Archive = ({ invoices, branches, settings, onDeleteInvoice, onShowToast, u
     if (!isHQ) list = list.filter(inv => inv.branchId === user.branchId);
     if (search.trim()) {
       const term = search.toLowerCase();
-      list = list.filter(inv => inv.id.toLowerCase().includes(term) || inv.customerName?.toLowerCase().includes(term));
+      list = list.filter(inv => 
+        (inv.id || '').toLowerCase().includes(term) || 
+        (inv.customerName || '').toLowerCase().includes(term)
+      );
     }
     return list;
   }, [invoices, search, user.role, user.branchId, activeTab, formattedSelectedDate, selectedDate]);

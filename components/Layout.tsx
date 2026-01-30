@@ -4,7 +4,7 @@ import {
   LayoutDashboard, ShoppingCart, Package, RotateCcw, Wallet, 
   BarChart3, Archive, Bell, ShieldCheck, AlertCircle, Mail,
   Trash2, Menu, LogOut, UserCog, Landmark, Terminal, Truck, Clock, X, UserCircle, History, Users, ChevronLeft, BellRing, Inbox, ClipboardCheck, Building2, Printer, Copy, PackageX, AlertTriangle, Eye, Barcode,
-  CheckCircle2, Settings, UserPlus
+  CheckCircle2, Settings, UserPlus, ShieldAlert, Fingerprint
 } from 'lucide-react';
 import { ViewType, Product, User as UserType, SystemSettings, LeaveRequest, Correspondence } from '../types';
 
@@ -126,6 +126,8 @@ const Layout = ({
     { id: 'treasury', label: 'الخزنة', icon: Landmark },
     { id: 'staff', label: 'الموارد البشرية', icon: UserCog },
     { id: 'reports', label: 'التقارير الإحصائية', icon: BarChart3 },
+    { id: 'dailyLogs', label: 'سجلات النشاط', icon: History },
+    { id: 'securityAudit', label: 'الرقابة الأمنية', icon: Fingerprint },
     { id: 'archive', label: 'أرشيف المبيعات', icon: Archive },
     { id: 'itControl', label: 'لوحة IT والضبط', icon: Terminal },
     { id: 'recycleBin', label: 'المحذوفات', icon: Trash2 },

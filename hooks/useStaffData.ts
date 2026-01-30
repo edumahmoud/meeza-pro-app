@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { User, Branch, StaffPayment, UserRole, StaffPaymentType, LeaveRequest } from '../types';
 import { supabase } from '../supabaseClient';
@@ -239,12 +238,21 @@ export const useStaffData = () => {
     onTransferEmployee: (userId: string, targetBranchId: string | null) => supabase.from('users').update({ branch_id: targetBranchId }).eq('id', userId).then(() => fetchStaffData()),
     updateUserRole: (userId: string, newRole: UserRole) => supabase.from('users').update({ role: newRole }).eq('id', userId).then(() => fetchStaffData()),
     incrementUserDay: async (id: string) => {
-       const { data: u } = await supabase.from('users').select('days_worked_accumulated').eq('id', id).single();
+       const { data: u } = await supabase.from('users').select('days_worked_accumulated, last_login_date').eq('id', id).single();
        if (u) {
-         await supabase.from('users').update({
-           days_worked_accumulated: (u.days_worked_accumulated || 0) + 1,
+         const lastLoginDate = u.last_login_date ? new Date(u.last_login_date).toLocaleDateString('en-CA') : null;
+         const todayDate = new Date().toLocaleDateString('en-CA');
+         
+         const updates: any = {
            last_login_date: new Date().toISOString()
-         }).eq('id', id);
+         };
+
+         // لا يتم زيادة العداد إلا إذا كان تاريخ الدخول مختلفاً عن تاريخ اليوم الحالي
+         if (lastLoginDate !== todayDate) {
+           updates.days_worked_accumulated = (u.days_worked_accumulated || 0) + 1;
+         }
+
+         await supabase.from('users').update(updates).eq('id', id);
        }
        await fetchStaffData();
     },

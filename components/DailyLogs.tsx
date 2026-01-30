@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { 
   History, Search, ArrowUpCircle, ArrowDownCircle, Banknote, RefreshCw, 
-  ShoppingBag, Receipt, RotateCcw, Clock, Calendar, ArrowUpDown, Tag, Percent, Filter, ShieldAlert, Eye, User, Fingerprint, X, FileSpreadsheet, CreditCard, PlusCircle
+  ShoppingBag, Receipt, RotateCcw, Clock, Calendar, ArrowUpDown, Tag, Percent, Filter, ShieldAlert, Eye, User, Fingerprint, X, FileSpreadsheet, CreditCard, PlusCircle,
+  Info
 } from 'lucide-react';
 import { ActivityLog, Invoice, User as UserType, AuditLog } from '../types';
 import * as XLSX from 'xlsx';
@@ -13,10 +14,11 @@ interface DailyLogsProps {
   auditLogs: AuditLog[];
   onRefresh: () => void;
   user: UserType;
+  initialTab?: 'activity' | 'sales' | 'security';
 }
 
-const DailyLogs = ({ logs, invoices, auditLogs, onRefresh, user }: DailyLogsProps) => {
-  const [activeTab, setActiveTab] = useState('activity' as 'activity' | 'sales' | 'security');
+const DailyLogs = ({ logs, invoices, auditLogs, onRefresh, user, initialTab = 'activity' }: DailyLogsProps) => {
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('all' as string);
   const [dateFilter, setDateFilter] = useState('' as string); 
@@ -35,9 +37,14 @@ const DailyLogs = ({ logs, invoices, auditLogs, onRefresh, user }: DailyLogsProp
 
   const filteredLogs = useMemo(() => {
     let list = logs.filter(l => {
-      const matchesSearch = (l.details.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                             l.user.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                             l.id.toLowerCase().includes(searchTerm.toLowerCase())); 
+      const details = l.details || '';
+      const userName = l.user || '';
+      const id = l.id || '';
+      const term = searchTerm.toLowerCase();
+
+      const matchesSearch = (details.toLowerCase().includes(term) || 
+                             userName.toLowerCase().includes(term) ||
+                             id.toLowerCase().includes(term)); 
       const matchesType = (typeFilter === 'all' || l.type === typeFilter);
       const logDateStr = new Date(l.timestamp).toISOString().split('T')[0];
       return matchesSearch && matchesType && (!dateFilter || logDateStr === dateFilter);
@@ -54,7 +61,11 @@ const DailyLogs = ({ logs, invoices, auditLogs, onRefresh, user }: DailyLogsProp
 
   const filteredAudit = useMemo(() => {
     return auditLogs.filter(a => {
-      const matchesSearch = a.username.toLowerCase().includes(searchTerm.toLowerCase()) || a.details.toLowerCase().includes(searchTerm.toLowerCase());
+      const username = a.username || '';
+      const details = a.details || '';
+      const term = searchTerm.toLowerCase();
+
+      const matchesSearch = username.toLowerCase().includes(term) || details.toLowerCase().includes(term);
       const logDateStr = new Date(a.timestamp).toISOString().split('T')[0];
       return matchesSearch && (!dateFilter || logDateStr === dateFilter);
     });
@@ -64,7 +75,12 @@ const DailyLogs = ({ logs, invoices, auditLogs, onRefresh, user }: DailyLogsProp
     let list = invoices.filter(i => {
       if (i.isDeleted) return false;
       const logDateStr = new Date(i.timestamp).toISOString().split('T')[0];
-      return (i.id.toLowerCase().includes(searchTerm.toLowerCase()) || i.customerName?.toLowerCase().includes(searchTerm.toLowerCase())) && (!dateFilter || logDateStr === dateFilter);
+      const id = i.id || '';
+      const cust = i.customerName || '';
+      const creator = i.creatorUsername || '';
+      const term = searchTerm.toLowerCase();
+      
+      return (id.toLowerCase().includes(term) || cust.toLowerCase().includes(term) || creator.toLowerCase().includes(term)) && (!dateFilter || logDateStr === dateFilter);
     });
     if (sortConfig) {
       list.sort((a: any, b: any) => {
@@ -117,9 +133,9 @@ const DailyLogs = ({ logs, invoices, auditLogs, onRefresh, user }: DailyLogsProp
                  {activeTab === 'security' ? (
                    <tr><th className="px-8 py-5">الإجراء</th><th className="px-8 py-5">الموظف</th><th className="px-8 py-5">البيان</th><th className="px-8 py-5 text-center">التوقيت</th><th className="px-8 py-5 text-left">التفاصيل</th></tr>
                  ) : activeTab === 'activity' ? (
-                   <tr><th className="px-8 py-5">النوع</th><th className="px-8 py-5">العملية</th><th className="px-8 py-5">المسؤول</th><th className="px-8 py-5 text-center">التوقيت</th><th className="px-8 py-5 text-left">المبلغ</th></tr>
+                   <tr><th className="px-8 py-5"> النوع</th><th className="px-8 py-5">العملية</th><th className="px-8 py-5">المسؤول</th><th className="px-8 py-5 text-center">التوقيت</th><th className="px-8 py-5 text-left">المبلغ</th></tr>
                  ) : (
-                   <tr><th className="px-8 py-5">رقم الفاتورة</th><th className="px-8 py-5">التوقيت</th><th className="px-8 py-5 text-center">الإجمالي</th><th className="px-8 py-5 text-center">الخصم</th><th className="px-8 py-5 text-left">الصافي</th></tr>
+                   <tr><th className="px-8 py-5">رقم الفاتورة</th><th className="px-8 py-5">الموظف</th><th className="px-8 py-5">التوقيت</th><th className="px-8 py-5 text-center">الإجمالي</th><th className="px-8 py-5 text-center">الخصم</th><th className="px-8 py-5 text-left">الصافي</th></tr>
                  )}
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -144,6 +160,7 @@ const DailyLogs = ({ logs, invoices, auditLogs, onRefresh, user }: DailyLogsProp
                        ) : (
                           <>
                              <td className="px-8 py-4 text-indigo-600">#{item.id.slice(-6)}</td>
+                             <td className="px-8 py-4 text-slate-700 font-black text-[10px]">{item.creatorUsername || '---'}</td>
                              <td className="px-8 py-4 text-slate-400 font-mono text-[9px]">{item.time}</td>
                              <td className="px-8 py-4 text-center">{item.totalBeforeDiscount?.toLocaleString()}</td>
                              <td className="px-8 py-4 text-center text-rose-500">-{item.discountValue?.toLocaleString()}</td>
@@ -161,6 +178,29 @@ const DailyLogs = ({ logs, invoices, auditLogs, onRefresh, user }: DailyLogsProp
            )}
         </div>
       </div>
+
+      {/* Audit Detail Modal */}
+      {selectedAudit && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[5000] flex items-center justify-center p-4">
+           <div className="bg-white rounded-[3rem] w-full max-w-2xl shadow-2xl overflow-hidden animate-in">
+              <div className="p-6 bg-slate-900 text-white flex justify-between items-center">
+                 <div className="flex items-center gap-3"><Fingerprint size={20}/><h3 className="font-black text-sm">تفاصيل العملية الأمنية</h3></div>
+                 <button onClick={() => setSelectedAudit(null)}><X size={24}/></button>
+              </div>
+              <div className="p-8 space-y-6 max-h-[70vh] overflow-y-auto scrollbar-hide text-right">
+                 <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 bg-slate-50 rounded-2xl text-center"><p className="text-[9px] font-black text-slate-400">الموظف</p><p className="font-black text-xs">{selectedAudit.username}</p></div>
+                    <div className="p-4 bg-slate-50 rounded-2xl text-center"><p className="text-[9px] font-black text-slate-400">التوقيت</p><p className="font-black text-xs">{new Date(selectedAudit.timestamp).toLocaleString('ar-EG')}</p></div>
+                 </div>
+                 <div className="p-6 bg-indigo-50 border border-indigo-100 rounded-2xl"><p className="text-[10px] font-black text-indigo-600 uppercase mb-2">وصف الإجراء</p><p className="text-sm font-bold text-slate-800 leading-relaxed">{selectedAudit.details}</p></div>
+                 <div className="space-y-4">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Info size={12}/> البيانات المتأثرة (Data Snapshot)</p>
+                    <div className="bg-slate-900 p-6 rounded-3xl overflow-x-auto"><pre className="text-[10px] font-mono text-emerald-400 leading-relaxed">{JSON.stringify(selectedAudit.newData || selectedAudit.oldData, null, 2)}</pre></div>
+                 </div>
+              </div>
+           </div>
+        </div>
+      )}
     </div>
   );
 };

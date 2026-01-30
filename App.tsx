@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { ViewType, User as UserType } from './types';
 import Layout from './components/Layout';
@@ -25,7 +24,7 @@ import { useInventory } from './hooks/useInventory';
 import { useSalesData } from './hooks/useSalesData';
 import { usePurchaseData } from './hooks/usePurchaseData';
 import { useStaffData } from './hooks/useStaffData';
-import { useSystemSettings } from './hooks/useSystemSettings'; // تم التوحيد هنا
+import { useSystemSettings } from './hooks/useSystemSettings';
 import { useReturnData } from './hooks/useReturnData';
 import { useArchiveData } from './hooks/useArchiveData';
 import { useActivityLogs } from './hooks/useActivityLogs';
@@ -45,7 +44,7 @@ interface ConfirmState {
 
 const App: React.FC = () => {
   const [user, setUser] = useState(null as UserType | null);
-  const [currentView, setView] = useState('dashboard' as ViewType);
+  const [currentView, setView] = useState('userProfile' as ViewType);
   const [toast, setToast] = useState(null as { message: string; type: 'success' | 'error' } | null);
   const [hasInitialLoaded, setHasInitialLoaded] = useState(false);
 
@@ -128,61 +127,30 @@ const App: React.FC = () => {
         return <Treasury invoices={salesData.invoices} expenses={salesData.expenses} branches={staffData.branches} onShowToast={showToast} user={user} />;
       case 'dailyLogs':
         return <DailyLogs logs={logsData.logs} invoices={salesData.invoices} auditLogs={audit.auditLogs} onRefresh={logsData.refresh} user={user} />;
+      case 'securityAudit':
+        return <DailyLogs logs={logsData.logs} invoices={salesData.invoices} auditLogs={audit.auditLogs} onRefresh={logsData.refresh} user={user} initialTab="security" />;
       case 'correspondence':
-        return <CorrespondenceView user={user} users={staffData.users} messages={corr.messages} leaveRequests={staffData.leaveRequests} roles={sys.roles} onSendMessage={corr.sendMessage} onAddLeaveRequest={staffData.addLeaveRequest} onShowToast={showToast} askConfirmation={askConfirmation} onUpdateLeaveStatus={staffData.updateLeaveStatus} checkPermission={sys.checkPermission} onMarkAsRead={corr.markAsRead} onUpdateMessageStatus={corr.updateMessageStatus} onDeleteMessagePermanent={corr.deleteMessagePermanent} onClearBox={corr.clearBox} onUpdateLeaveMeta={staffData.updateLeaveMeta} onDeleteLeavePermanent={staffData.deleteLeaveRequestPermanent} onClearLeaves={staffData.clearUserLeaves} />;
-      case 'itControl':
-        return <ITControl settings={sys.settings} overrides={sys.overrides} roles={sys.roles} onUpdateSettings={sys.updateSettings} onAddOverride={sys.addOverride} onRemoveOverride={sys.removeOverride} onAddRole={sys.addRole} onDeleteRole={sys.deleteRole} onShowToast={showToast} user={user} />;
-      case 'reports':
-        return <Reports invoices={salesData.invoices} returns={returnData.returns} expenses={salesData.expenses} purchases={purchaseData.purchases} supplierPayments={purchaseData.payments} branches={staffData.branches} user={user} />;
-      case 'recycleBin':
-        return <RecycleBin archiveRecords={archiveData.archive} onShowToast={showToast} user={user} />;
+        return <CorrespondenceView user={user} users={staffData.users} messages={corr.messages} leaveRequests={staffData.leaveRequests} roles={sys.roles} onSendMessage={corr.sendMessage} onAddLeaveRequest={staffData.addLeaveRequest} onShowToast={showToast} askConfirmation={askConfirmation} onUpdateLeaveStatus={staffData.updateLeaveStatus} checkPermission={sys.checkPermission} onMarkAsRead={corr.markAsRead} onUpdateMessageStatus={corr.updateMessageStatus} onDeleteMessagePermanent={corr.deleteMessagePermanent} onClearBox={corr.clearBox} onUpdateLeaveMeta={staffData.updateLeaveMeta} onDeleteLeavePermanent={staffData.deleteLeaveRequestPermanent} onClearLeaves={staffData.clearUserLeaves} onEmptyTrash={corr.emptyTrashPermanent} />;
       case 'customers':
         return <Customers invoices={salesData.invoices} returns={returnData.returns} registeredCustomers={customers.customers} onAddCustomer={customers.addCustomer} onDeleteCustomer={customers.deleteCustomer} onShowToast={showToast} />;
       case 'purchases':
-        return (
-          <Purchases 
-            products={inventory.products} 
-            suppliers={purchaseData.suppliers} 
-            purchases={purchaseData.purchases} 
-            purchaseReturns={purchaseData.purchaseReturns}
-            branches={staffData.branches} 
-            onAddPurchase={purchaseData.addPurchase} 
-            onAddProduct={inventory.addProduct}
-            onAddPurchaseReturn={purchaseData.addPurchaseReturn}
-            onShowToast={showToast} 
-            askConfirmation={askConfirmation} 
-            user={user} 
-          />
-        );
+        return <Purchases products={inventory.products} suppliers={purchaseData.suppliers} purchases={purchaseData.purchases} purchaseReturns={purchaseData.purchaseReturns} onAddPurchase={purchaseData.addPurchase} onAddProduct={inventory.addProduct} onAddPurchaseReturn={purchaseData.addPurchaseReturn} onShowToast={showToast} askConfirmation={askConfirmation} user={user} canManageSuppliers={sys.checkPermission(user, 'manage_suppliers')} />;
       case 'suppliers':
-        return (
-          <Suppliers 
-            suppliers={purchaseData.suppliers} 
-            purchases={purchaseData.purchases} 
-            payments={purchaseData.payments} 
-            purchaseReturns={purchaseData.purchaseReturns}
-            onAddSupplier={purchaseData.addSupplier} 
-            onDeleteSupplier={purchaseData.deleteSupplier} 
-            onAddSupplierPayment={purchaseData.addSupplierPayment} 
-            onShowToast={showToast} 
-            askConfirmation={askConfirmation} 
-            user={user} 
-            checkPermission={sys.checkPermission} 
-            quickSettlePurchase={purchaseData.quickSettlePurchase} 
-          />
-        );
+        return <Suppliers suppliers={purchaseData.suppliers} purchases={purchaseData.purchases} payments={purchaseData.payments} purchaseReturns={purchaseData.purchaseReturns} onAddSupplier={purchaseData.addSupplier} onDeleteSupplier={purchaseData.deleteSupplier} onDeletePurchase={purchaseData.deletePurchase} onAddSupplierPayment={purchaseData.addSupplierPayment} onShowToast={showToast} askConfirmation={askConfirmation} user={user} checkPermission={sys.checkPermission} quickSettlePurchase={purchaseData.quickSettlePurchase} onAddPurchaseReturn={purchaseData.addPurchaseReturn} />;
+      case 'itControl':
+        return <ITControl settings={sys.settings} overrides={sys.overrides} roles={sys.roles} onUpdateSettings={sys.updateSettings} onAddOverride={sys.addOverride} onRemoveOverride={sys.removeOverride} onAddRole={sys.addRole} onDeleteRole={sys.deleteRole} onShowToast={showToast} user={user} />;
+      case 'recycleBin':
+        return <RecycleBin archiveRecords={archiveData.archive} onShowToast={showToast} user={user} />;
       default:
         return <Dashboard invoices={salesData.invoices} returns={returnData.returns} expenses={salesData.expenses} products={inventory.products} staffPayments={staffData.staffPayments} user={user} summaryStats={salesData.summaryStats} suppliers={purchaseData.suppliers} />;
     }
   };
 
   return (
-    <>
-      <Layout currentView={currentView} setView={setView} products={inventory.products} leaveRequests={staffData.leaveRequests} messages={corr.messages} onReset={() => {}} onRestore={() => {}} toast={toast} onCloseToast={() => setToast(null)} user={user} onLogout={() => { setUser(null); localStorage.removeItem('meeza_pos_user'); }} settings={sys.settings} users={staffData.users} roles={sys.roles} branches={staffData.branches} checkPermission={sys.checkPermission}>
-        {renderContent()}
-      </Layout>
-      <ConfirmModal isOpen={confirmState.isOpen} title={confirmState.title} message={confirmState.message} variant={confirmState.variant} onConfirm={confirmState.onConfirm} onCancel={() => setConfirmState(prev => ({ ...prev, isOpen: false }))} />
-    </>
+    <Layout currentView={currentView} setView={setView} products={inventory.products} toast={toast} onCloseToast={() => setToast(null)} user={user} onLogout={() => { localStorage.removeItem('meeza_pos_user'); setUser(null); }} settings={sys.settings} leaveRequests={staffData.leaveRequests} messages={corr.messages} onReset={() => {}} onRestore={() => {}} users={staffData.users} roles={sys.roles} branches={staffData.branches} checkPermission={sys.checkPermission}>
+      {renderContent()}
+      <ConfirmModal isOpen={confirmState.isOpen} title={confirmState.title} message={confirmState.message} onConfirm={confirmState.onConfirm} onCancel={() => setConfirmState({...confirmState, isOpen: false})} variant={confirmState.variant} />
+    </Layout>
   );
 };
 

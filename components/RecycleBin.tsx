@@ -14,11 +14,16 @@ const RecycleBin = ({ archiveRecords, onShowToast, user }: RecycleBinProps) => {
   const [sortConfig, setSortConfig] = useState({ key: 'timestamp', direction: 'desc' } as { key: string, direction: 'asc' | 'desc' } | null);
 
   const filtered = useMemo(() => {
-    let list = archiveRecords.filter(r => 
-      r.itemId.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      r.deleterName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      r.itemType.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    let list = archiveRecords.filter(r => {
+      const id = r.itemId || '';
+      const deleter = r.deleterName || '';
+      const type = r.itemType || '';
+      const term = searchTerm.toLowerCase();
+
+      return id.toLowerCase().includes(term) || 
+             deleter.toLowerCase().includes(term) ||
+             type.toLowerCase().includes(term);
+    });
 
     if (sortConfig !== null) {
       list.sort((a: any, b: any) => {
@@ -101,7 +106,7 @@ const RecycleBin = ({ archiveRecords, onShowToast, user }: RecycleBinProps) => {
                   <td className="px-8 py-4 font-black text-indigo-600">#{record.itemId}</td>
                   <td className="px-8 py-4">
                     <div className="flex items-center gap-2">
-                       <div className="w-6 h-6 bg-slate-100 rounded-full flex items-center justify-center text-[9px] font-black">{record.deleterName[0]}</div>
+                       <div className="w-6 h-6 bg-slate-100 rounded-full flex items-center justify-center text-[9px] font-black">{(record.deleterName || 'U')[0]}</div>
                        <span>{record.deleterName}</span>
                     </div>
                   </td>

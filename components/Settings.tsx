@@ -34,6 +34,7 @@ const Settings: React.FC<SettingsProps> = ({ onShowToast, askConfirmation }) => 
   const fileInputRef = useRef(null as HTMLInputElement | null);
 
   const MASTER_ADMIN_ID = '00000000-0000-0000-0000-000000000000';
+  const DUMMY_UUID = 'ffffffff-ffff-ffff-ffff-ffffffffffff';
 
   const handleBackup = async () => {
     setIsLoading(true);
@@ -86,19 +87,20 @@ const Settings: React.FC<SettingsProps> = ({ onShowToast, askConfirmation }) => 
           const text = await file.text();
           const data = JSON.parse(text);
           
-          const tablesOrder = [
-            'audit_logs', 'unified_archive', 'permission_overrides', 'staff_payments', 
-            'expenses', 'returns', 'sales_invoices', 'treasury_logs', 'purchase_returns', 'supplier_payments', 
-            'purchase_records', 'suppliers', 'products', 'leave_requests', 'correspondence', 
-            'shifts', 'users', 'branches', 'app_roles', 'system_settings'
-          ];
-
           onShowToast("جاري تهيئة النظام للاستعادة...", "success");
 
-          // Using RPC reset first ensures a clean slate with proper cascade handling
-          await supabase.rpc('reset_entire_system');
+          // استدعاء RPC المحدث الذي يحتوي على WHERE
+          const { error: rpcError } = await supabase.rpc('reset_entire_system');
+          if (rpcError) throw rpcError;
 
-          const restoreOrder = [...tablesOrder].reverse();
+          const restoreOrder = [
+            'system_settings', 'app_roles', 'branches', 'users',
+            'products', 'suppliers', 'purchase_records', 'supplier_payments',
+            'sales_invoices', 'returns', 'expenses', 'staff_payments',
+            'permission_overrides', 'unified_archive', 'treasury_logs',
+            'correspondence', 'leave_requests', 'shifts', 'audit_logs'
+          ];
+
           for (const table of restoreOrder) {
             if (data[table] && data[table].length > 0) {
               const { error } = await supabase.from(table).insert(data[table]);
@@ -108,9 +110,9 @@ const Settings: React.FC<SettingsProps> = ({ onShowToast, askConfirmation }) => 
 
           onShowToast("تمت استعادة كافة البيانات بنجاح. سيتم إعادة تشغيل النظام.", "success");
           setTimeout(() => window.location.reload(), 2500);
-        } catch (error) {
+        } catch (error: any) {
           console.error(error);
-          onShowToast("فشل استعادة البيانات. الملف قد يكون تالفاً.", "error");
+          onShowToast("فشل استعادة البيانات: " + (error.message || "الملف تالف"), "error");
         } finally {
           setIsLoading(false);
         }
@@ -130,33 +132,24 @@ const Settings: React.FC<SettingsProps> = ({ onShowToast, askConfirmation }) => 
 
       if (resetOptions.fullDatabase) {
         onShowToast("جاري التدمير الشامل للسحابة (Server-Side)...", "success");
-        // Use the robust RPC function for full reset
         const { error } = await supabase.rpc('reset_entire_system');
         if (error) throw error;
       } else {
-        // Partial reset logic (client-side deletion with proper ordering)
-        // Must delete child tables first to avoid FK errors
         let tablesToClear: string[] = [];
-        
-        // Sales: Delete returns BEFORE sales_invoices
         if (resetOptions.sales) tablesToClear.push('returns', 'sales_invoices', 'treasury_logs', 'expenses');
-        
-        // Inventory: Safe to clear products if Sales/Purchases are handled or if cascade works (but supabase client doesn't cascade delete automatically)
         if (resetOptions.inventory) tablesToClear.push('products');
-        
-        // Purchases: Delete payments/returns BEFORE records, and records BEFORE suppliers
         if (resetOptions.purchases) tablesToClear.push('purchase_returns', 'supplier_payments', 'purchase_records', 'suppliers');
 
         if (tablesToClear.length > 0) {
           onShowToast("جاري تنظيف الأقسام المختارة...", "success");
           for (const table of tablesToClear) {
-            // Delete all records except the master admin placeholder if it exists in that table
-            await supabase.from(table).delete().neq('id', '00000000-0000-0000-0000-000000000000'); 
+            // استخدام .neq مع معرف وهمي لضمان وجود WHERE clause لتلبية متطلبات PostgREST
+            await supabase.from(table).delete().neq('id', DUMMY_UUID); 
           }
         }
       }
 
-      onShowToast("تم تصفير النظام بنجاح. التطبيق الآن جاهز لمؤسسة جديدة.", "success");
+      onShowToast("تم تصفير النظام بنجاح.", "success");
       setTimeout(() => window.location.reload(), 2000);
     } catch (error: any) {
       console.error(error);
@@ -193,7 +186,7 @@ const Settings: React.FC<SettingsProps> = ({ onShowToast, askConfirmation }) => 
                        <p className="text-[9px] font-bold text-slate-400 uppercase">Backup To Local File (JSON)</p>
                     </div>
                  </div>
-                 <p className="text-[10px] text-slate-500 font-bold leading-relaxed">قم بتحميل ملف يحتوي على كافة بيانات النظام (المنتجات، الفواتير، الموردين، الكوادر) لحفظها خارجياً.</p>
+                 <p className="text-[10px] text-slate-500 font-bold leading-relaxed">قم بتحميل ملف يحتوي على كافة بيانات النظام لحفظها خارجياً.</p>
                  <button 
                   onClick={handleBackup}
                   disabled={isLoading}
@@ -214,7 +207,7 @@ const Settings: React.FC<SettingsProps> = ({ onShowToast, askConfirmation }) => 
                        <p className="text-[9px] font-bold text-slate-400 uppercase">Restore System Data</p>
                     </div>
                  </div>
-                 <p className="text-[10px] text-slate-500 font-bold leading-relaxed">اختر ملف نسخة احتياطية سابق (JSON) لاستعادة النظام لحالته السابقة. سيتم حذف البيانات الحالية.</p>
+                 <p className="text-[10px] text-slate-500 font-bold leading-relaxed">اختر ملف نسخة احتياطية سابق (JSON) لاستعادة النظام لحالته السابقة.</p>
                  <input 
                   type="file" 
                   accept=".json" 
@@ -243,7 +236,7 @@ const Settings: React.FC<SettingsProps> = ({ onShowToast, askConfirmation }) => 
         <div className="p-8 space-y-8">
           <div className="bg-amber-50 p-6 rounded-3xl border border-amber-100 flex items-start gap-4">
              <AlertTriangle className="text-amber-500 shrink-0 mt-1" size={20} />
-             <div className="text-xs font-bold text-amber-800 leading-relaxed uppercase">تنبيه سيادي: العمليات أدناه ستقوم بمسح البيانات نهائياً من السحابة. استخدم "مسح شامل" لإعادة استخدام التطبيق في شركة أخرى.</div>
+             <div className="text-xs font-bold text-amber-800 leading-relaxed uppercase">تنبيه سيادي: العمليات أدناه ستقوم بمسح البيانات نهائياً من السحابة.</div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <button onClick={() => setResetOptions({...resetOptions, localStorage: !resetOptions.localStorage, fullDatabase: false})} className={`p-6 rounded-[2rem] border-2 transition-all flex items-center gap-4 text-right ${resetOptions.localStorage ? 'border-indigo-600 bg-indigo-50/50' : 'border-slate-100 bg-slate-50 hover:border-slate-200'}`}><Smartphone className={resetOptions.localStorage ? 'text-indigo-600' : 'text-slate-400'} size={24} /><div><p className="font-black text-xs text-slate-800">مسح الذاكرة المحلية</p><p className="text-[9px] font-bold text-slate-400 uppercase">Cache & Session Data</p></div></button>
@@ -265,7 +258,7 @@ const Settings: React.FC<SettingsProps> = ({ onShowToast, askConfirmation }) => 
                 <h3 className="text-xl font-black mb-2">{isTripleConfirmed ? 'تحذير نهائي وقاطع!' : isDoubleConfirmed ? 'هل أنت متأكد تماماً؟' : 'تأكيد العملية'}</h3>
                 <p className="text-slate-500 text-xs font-bold leading-relaxed uppercase">
                   {isTripleConfirmed 
-                    ? 'سيتم مسح (الفروع، الموظفين، المنتجات، الموردين، المبيعات). سيبقى فقط حساب الـ Admin للدخول. اضغط لتنفيذ التدمير الذاتي للبيانات.'
+                    ? 'سيتم مسح (الفروع، الموظفين، المنتجات، الموردين، المبيعات). اضغط لتنفيذ التدمير الذاتي للبيانات.'
                     : isDoubleConfirmed 
                       ? 'أنت على وشك تدمير قاعدة البيانات السحابية الحالية. هذه العملية غير قابلة للتراجع.' 
                       : 'سيتم مسح البيانات المختارة ولا يمكن استعادتها بعد الضغط على تأكيد.'}

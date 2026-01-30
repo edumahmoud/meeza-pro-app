@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { ActivityLog } from '../types';
 import { supabase } from '../supabaseClient';
@@ -9,19 +10,20 @@ export const useActivityLogs = () => {
   const fetchLogs = useCallback(async () => {
     setLoading(true);
     try {
-      // جلب البيانات من 6 جداول مختلفة لتغطية كافة العمليات المالية والحركات المخزنية
-      const [invRes, expRes, retRes, payRes, purRes, supPayRes] = await Promise.all([
-        supabase.from('sales_invoices').select('id, net_total, creator_username, timestamp').order('timestamp', { ascending: false }).limit(30),
-        supabase.from('expenses').select('id, description, amount, timestamp, users:created_by(username)').order('timestamp', { ascending: false }).limit(15),
+      // جلب البيانات من كافة جداول الحركات المالية والمخزنية
+      const [invRes, expRes, retRes, payRes, purRes, supPayRes, purRetRes] = await Promise.all([
+        supabase.from('sales_invoices').select('id, net_total, creator_username, timestamp').order('timestamp', { ascending: false }).limit(20),
+        supabase.from('expenses').select('id, description, amount, timestamp, users:created_by(username)').order('timestamp', { ascending: false }).limit(10),
         supabase.from('returns').select('id, total_refund, timestamp, users:created_by(username)').order('timestamp', { ascending: false }).limit(10),
-        supabase.from('staff_payments').select('id, payment_type, amount, payment_date, users:created_by(username)').order('payment_date', { ascending: false }).limit(15),
-        supabase.from('purchase_records').select('id, supplier_name, total_amount, timestamp, users:created_by(username)').order('timestamp', { ascending: false }).limit(15),
-        supabase.from('supplier_payments').select('*, suppliers(name), users:created_by(username)').order('timestamp', { ascending: false }).limit(15)
+        supabase.from('staff_payments').select('id, payment_type, amount, payment_date, users:created_by(username)').order('payment_date', { ascending: false }).limit(10),
+        supabase.from('purchase_records').select('id, supplier_name, total_amount, timestamp, users:created_by(username)').order('timestamp', { ascending: false }).limit(10),
+        supabase.from('supplier_payments').select('*, suppliers(name), users:created_by(username)').order('timestamp', { ascending: false }).limit(10),
+        supabase.from('purchase_returns').select('id, total_refund, timestamp, users:created_by(username)').order('timestamp', { ascending: false }).limit(10)
       ]);
 
       const combined: ActivityLog[] = [];
 
-      // 1. المبيعات
+      // 1. مبيعات
       invRes.data?.forEach(i => {
         combined.push({
           id: i.id,
@@ -35,7 +37,7 @@ export const useActivityLogs = () => {
         });
       });
 
-      // 2. المصاريف
+      // 2. مصروفات
       expRes.data?.forEach((e: any) => {
         combined.push({
           id: e.id,
@@ -49,7 +51,7 @@ export const useActivityLogs = () => {
         });
       });
 
-      // 3. المرتجعات
+      // 3. مرتجعات مبيعات
       retRes.data?.forEach((r: any) => {
         combined.push({
           id: r.id,
@@ -63,7 +65,21 @@ export const useActivityLogs = () => {
         });
       });
 
-      // 4. مدفوعات الموظفين
+      // 4. مرتجعات مشتريات (توريد)
+      purRetRes.data?.forEach((pr: any) => {
+        combined.push({
+          id: pr.id,
+          type: 'return',
+          user: pr.users?.username || 'admin',
+          details: `مرتجع مشتريات (خروج مخزني) (#${pr.id.slice(-6)})`,
+          amount: Number(pr.total_refund || 0),
+          timestamp: pr.timestamp,
+          time: new Date(pr.timestamp).toLocaleTimeString('ar-EG'),
+          date: new Date(pr.timestamp).toLocaleDateString('ar-EG')
+        });
+      });
+
+      // 5. مدفوعات موظفين
       payRes.data?.forEach((p: any) => {
         const ts = new Date(p.payment_date).getTime();
         combined.push({
@@ -78,13 +94,13 @@ export const useActivityLogs = () => {
         });
       });
 
-      // 5. التوريدات (الفواتير الجديدة)
+      // 6. توريدات
       purRes.data?.forEach((pu: any) => {
         combined.push({
           id: pu.id,
           type: 'purchase',
           user: pu.users?.username || 'admin',
-          details: `فاتورة توريد: ${pu.supplier_name} (#${pu.id.slice(-6)})`,
+          details: `فاتورة توريد من ${pu.supplier_name} (#${pu.id.slice(-6)})`,
           amount: Number(pu.total_amount || 0),
           timestamp: pu.timestamp,
           time: new Date(pu.timestamp).toLocaleTimeString('ar-EG'),
@@ -92,7 +108,7 @@ export const useActivityLogs = () => {
         });
       });
 
-      // 6. مدفوعات الموردين (سداد المديونية) - الإضافة الجديدة المطلوبة
+      // 7. سداد موردين
       supPayRes.data?.forEach((sp: any) => {
         combined.push({
           id: sp.id,
@@ -106,7 +122,6 @@ export const useActivityLogs = () => {
         });
       });
 
-      // ترتيب السجلات تنازلياً حسب الوقت
       setLogs(combined.sort((a, b) => b.timestamp - a.timestamp));
     } catch (err) {
       console.error("Logs Fetch Error:", err);

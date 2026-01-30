@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Search, Eye, X, Package, Boxes, Trash2, 
-  Building2, PackageX, Tag, AlertTriangle, RefreshCw, Printer, Percent, CheckCircle2, ChevronLeft
+  Building2, PackageX, Tag, AlertTriangle, RefreshCw, Printer, Percent, CheckCircle2, ChevronLeft, Save
 } from 'lucide-react';
 import { Product, User as UserType, Branch } from '../types';
 import { copyToClipboard } from './Layout';
@@ -38,15 +38,18 @@ const Inventory = ({ products, branches = [], onUpdateProduct, onDeleteProduct, 
     }
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      list = list.filter(p => p.name.toLowerCase().includes(term) || p.code.includes(term));
+      list = list.filter(p => 
+        (p.name || '').toLowerCase().includes(term) || 
+        (p.code || '').includes(term)
+      );
     }
     if (sortConfig) {
-      list.sort((a, b) => {
+      list.sort((a: any, b: any) => {
         let valA: any = a[sortConfig.key as keyof Product];
         let valB: any = b[sortConfig.key as keyof Product];
         if (sortConfig.key === 'totalValue') {
-             valA = a.stock * a.wholesalePrice;
-             valB = b.stock * b.wholesalePrice;
+             valA = (a.stock || 0) * (a.wholesalePrice || 0);
+             valB = (b.stock || 0) * (b.wholesalePrice || 0);
         }
         if (typeof valA === 'string') valA = valA.toLowerCase();
         if (typeof valB === 'string') valB = valB.toLowerCase();
@@ -74,14 +77,6 @@ const Inventory = ({ products, branches = [], onUpdateProduct, onDeleteProduct, 
   const [isOfferModalOpen, setIsOfferModalOpen] = useState(false);
   const [offerPrice, setOfferPrice] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-
-  const stockAcrossBranches = useMemo(() => {
-    if (!selectedProduct) return [];
-    return branches.filter(b => !b.isDeleted).map(branch => {
-      const productInBranch = products.find(p => p.code === selectedProduct.code && p.branchId === branch.id && !p.isDeleted);
-      return { branchName: branch.name, stock: productInBranch ? productInBranch.stock : 0 };
-    });
-  }, [products, selectedProduct, branches]);
 
   useEffect(() => {
     if (selectedProduct) {
@@ -180,20 +175,6 @@ const Inventory = ({ products, branches = [], onUpdateProduct, onDeleteProduct, 
               <div className="p-8 space-y-6 overflow-y-auto max-h-[85vh] scrollbar-hide text-right">
                  <div className="text-center space-y-1"><h2 className="text-2xl font-black text-slate-800">{selectedProduct.name}</h2><p className="text-xs text-slate-400 font-bold uppercase tracking-widest">كود الصنف: #{selectedProduct.code}</p></div>
                  
-                 <div className="bg-slate-50 rounded-3xl border border-slate-100 overflow-hidden">
-                    <div className="p-4 bg-indigo-50 border-b border-indigo-100 flex items-center gap-2"><Building2 size={16} className="text-indigo-600"/><h5 className="text-[10px] font-black text-indigo-900 uppercase">توزيع المخزون عبر كافة الفروع المتاحة</h5></div>
-                    <div className="p-2 max-h-48 overflow-y-auto scrollbar-hide">
-                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          {stockAcrossBranches.map((item, idx) => (
-                             <div key={idx} className="flex justify-between items-center p-3 bg-white rounded-xl border border-slate-100 shadow-sm">
-                                <span className="text-[10px] font-black text-slate-600 truncate max-w-[120px]">{item.branchName}</span>
-                                <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg ${item.stock <= 0 ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'}`}>{item.stock} قطعة</span>
-                             </div>
-                          ))}
-                       </div>
-                    </div>
-                 </div>
-
                  <div className="grid grid-cols-2 gap-4">
                     <div className="p-4 bg-slate-50 rounded-2xl text-center shadow-inner relative overflow-hidden group">
                        <p className="text-[9px] font-black text-slate-400 uppercase mb-1">الرصيد المتاح (الفرع الحالي)</p>
@@ -213,6 +194,44 @@ const Inventory = ({ products, branches = [], onUpdateProduct, onDeleteProduct, 
                  <button onClick={() => { setOfferPrice(selectedProduct.offerPrice?.toString() || ''); setIsOfferModalOpen(true); }} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-indigo-700 transition-all flex items-center justify-center gap-2">
                     <Tag size={16}/> {selectedProduct.offerPrice ? 'تعديل أو إلغاء عرض السعر' : 'إضافة عرض سعر مؤقت'}
                  </button>
+              </div>
+           </div>
+        </div>
+      )}
+
+      {/* واجهة إضافة العرض السعري */}
+      {isOfferModalOpen && selectedProduct && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[7000] flex items-center justify-center p-4">
+           <div className="bg-white rounded-[2.5rem] w-full max-w-sm shadow-2xl overflow-hidden animate-in">
+              <div className="p-6 bg-rose-600 text-white flex justify-between items-center">
+                 <h3 className="font-black text-sm">العروض السعرية (تخفيضات)</h3>
+                 <button onClick={() => setIsOfferModalOpen(false)}><X size={24}/></button>
+              </div>
+              <div className="p-8 space-y-5 text-right">
+                 <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 mb-2">
+                    <p className="text-[9px] font-black text-slate-400 uppercase mb-1">سعر البيع الرسمي الحالي</p>
+                    <p className="text-xl font-black text-slate-800">{selectedProduct.retailPrice} ج.م</p>
+                 </div>
+                 <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase">سعر العرض الجديد (المخفّض)</label>
+                    <div className="relative">
+                       <Tag size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300"/>
+                       <input 
+                        type="number" 
+                        className="w-full pr-12 pl-4 py-4 bg-slate-50 border-2 border-transparent focus:border-rose-500 rounded-2xl font-black text-2xl outline-none transition-all" 
+                        value={offerPrice} 
+                        onChange={e => setOfferPrice(e.target.value)} 
+                        placeholder="0.00"
+                       />
+                    </div>
+                    <p className="text-[9px] font-bold text-slate-400 mt-2">سيتم استخدام هذا السعر في نقطة البيع بدلاً من السعر الرسمي.</p>
+                 </div>
+                 <div className="flex gap-3 pt-4">
+                    <button onClick={() => { setOfferPrice(''); handleSetOffer(); }} className="flex-1 py-4 bg-slate-100 text-rose-600 rounded-xl font-black text-xs hover:bg-rose-50 transition-all">إلغاء العرض</button>
+                    <button onClick={handleSetOffer} disabled={isSaving} className="flex-[2] py-4 bg-rose-600 text-white rounded-xl font-black text-xs shadow-xl flex items-center justify-center gap-2 hover:bg-rose-700 transition-all">
+                       {isSaving ? <RefreshCw className="animate-spin" size={16}/> : <Save size={16}/>} تثبيت العرض
+                    </button>
+                 </div>
               </div>
            </div>
         </div>

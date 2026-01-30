@@ -63,7 +63,9 @@ const Sales = ({
     return products.filter(p => {
       if (p.isDeleted) return false;
       const matchesBranch = isAdmin ? true : (p.branchId === user.branchId);
-      const matchesSearch = p.name.toLowerCase().includes(term) || p.code.includes(term);
+      const name = p.name || '';
+      const code = p.code || '';
+      const matchesSearch = name.toLowerCase().includes(term) || code.includes(term);
       return matchesBranch && matchesSearch;
     }).slice(0, 20); 
   }, [products, searchTerm, user.branchId, isAdmin]);
@@ -304,7 +306,7 @@ const Sales = ({
                                     <div className="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center font-black group-hover:bg-indigo-600 group-hover:text-white transition-colors">
                                        {p.offerPrice ? <Percent size={18} className="text-rose-600" /> : <Package size={18}/>}
                                     </div>
-                                    <div><h5 className="text-sm font-black text-slate-800">{p.name}</h5><p className="text-[10px] text-slate-400 font-mono">#{p.code}</p></div>
+                                    <div><h5 className="text-sm font-black text-slate-800">{p.name || '---'}</h5><p className="text-[10px] text-slate-400 font-mono">#{p.code || '---'}</p></div>
                                  </div>
                                  <p className="text-sm font-black text-indigo-600">{p.offerPrice || p.retailPrice} ج.م</p>
                               </div>
